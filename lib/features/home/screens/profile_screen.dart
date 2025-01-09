@@ -23,12 +23,38 @@ class ProfileScreen extends StatelessWidget {
                 'เกียร์ที่แปลว่าเก (⊙_⊙)',
                 style: TextStyle(fontSize: 18),
               ),
-              Row(
-                children: [
-                  Icon(Icons.bar_chart, size: 28),
-                  SizedBox(width: 15),
-                  Icon(Icons.menu, size: 28),
-                ],
+            ],
+          ),
+        ),
+        endDrawer: Drawer(
+          shape: RoundedRectangleBorder(),
+          backgroundColor: Colors.black,
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundImage: AssetImage('assets/profile.jpg'),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'gamucosu',
+                      style: TextStyle(color: Colors.white, fontSize: 20),
+                    ),
+                  ],
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.white),
+                title: const Text('Logout', style: TextStyle(color: Colors.white)),
+                onTap: () => _logout(context),
               ),
             ],
           ),
@@ -80,13 +106,12 @@ class ProfileScreen extends StatelessWidget {
                                     style: TextStyle(
                                       color: Colors.white,
                                     ),
-                                    overflow: TextOverflow.ellipsis,  // ตัดข้อความเกินจอ
-                                    maxLines: 1,  // จำกัด 1 บรรทัด
+                                    overflow: TextOverflow.ellipsis, // ตัดข้อความเกินจอ
+                                    maxLines: 1, // จำกัด 1 บรรทัด
                                   ),
                                 ),
                               ],
-                            )
-                            ,
+                            ),
                           ],
                         ),
                       ),
@@ -138,7 +163,7 @@ class ProfileScreen extends StatelessWidget {
                 Divider(color: Colors.grey[800]),
 
                 // Tab Bar
-                TabBar(
+                const TabBar(
                   indicatorColor: Colors.white,
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.grey,
