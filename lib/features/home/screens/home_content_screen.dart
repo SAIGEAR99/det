@@ -12,6 +12,14 @@ class HomeContentScreen extends StatelessWidget {
       'likes': 246,
       'comments': 3,
       'shares': 3,
+    },  {
+      'username': 'justina.xiecl0624',
+      'time': '4 ชม.',
+      'content': 'โพสต์ข้อความพร้อมรูปภาพที่เลื่อนได้V2',
+      'images': ['assets/post_3.jpg', 'assets/post_2.jpg'],
+      'likes': 246,
+      'comments': 3,
+      'shares': 3,
     },
     {
       'username': 'comi1.4',

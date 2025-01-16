@@ -1,12 +1,94 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:det/features/auth/providers/auth_provider.dart';
+import 'package:det/services/user.dart';
+import 'package:image_picker/image_picker.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
+  @override
+  _ProfileScreenState createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final UserService _userService = UserService();
+  String userId = 'Loading...';
+  String username = 'Loading...';
+  String email = 'Loading...';
+  String fullName = 'Loading...';
+  String profilePicture = 'Loading...';
+  String bio = 'Loading...';
+  String createdAt = 'Loading...';
+  String link = 'Loading...';
+
+  @override
+  void initState() {
+    super.initState();
+    Provider.of<AuthProvider>(context, listen: false).loadUser().then((_) {
+      _getUserData();
+    });
+  }
+
+  // ฟังก์ชันเรียกข้อมูลจาก API
+  void _getUserData() async {
+    final response = await _userService.getUserData(context);  // ส่ง context ไปให้ getUserData
+    if (response != null) {
+      setState(() {
+        userId = response['user_id'].toString();  // ดึง user_id
+        username = response['username'];  // ดึง username
+        email = response['email'];  // ดึง email
+        fullName = response['full_name'];  // ดึง full_name
+        profilePicture = response['profile_picture'] ?? 'No picture';  // ดึง profile_picture
+        bio = response['bio'] ?? 'No bio';  // ดึง bio
+        createdAt = response['created_at'];
+        link = response['link'];// ดึง created_at
+      });
+    } else {
+      setState(() {
+        userId = 'Error fetching data';
+        username = 'Error fetching data';
+        email = 'Error fetching data';
+        fullName = 'Error fetching data';
+        profilePicture = 'Error fetching data';
+        bio = 'Error fetching data';
+        createdAt = 'Error fetching data';
+        link = 'Error fetching data';
+      });
+    }
+  }
+
   void _logout(BuildContext context) {
     Navigator.pushReplacementNamed(context, '/login');
   }
 
+  void _pickAndUploadImage() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      final response = await _userService.uploadProfilePicture(
+        userId, // ส่ง user_id ที่เก็บไว้
+        image.path,
+      );
+
+      if (response != null) {
+        setState(() {
+          profilePicture = response['profile_picture'];
+        });
+        print('Profile picture updated successfully');
+      } else {
+        print('Error uploading profile picture');
+      }
+    }
+  }
+
+
   void _showEditProfileBottomSheet(BuildContext context) {
+    // TextEditingController สำหรับเก็บค่าที่ผู้ใช้แก้ไข
+    final TextEditingController _fullNameController = TextEditingController(text: fullName);
+    final TextEditingController _bioController = TextEditingController(text: bio);
+    final TextEditingController _linkController = TextEditingController(text: link);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -46,9 +128,24 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          // Save action
-                          Navigator.pop(context);
+                        onTap: () async {
+                          // เมื่อกด "เสร็จ", ส่งข้อมูลที่แก้ไขไปยัง API
+                          final response = await _userService.editProfile(
+                            _fullNameController.text,
+                            _bioController.text,
+                            _linkController.text,context
+                          );
+
+                          if (response != null) {
+                            setState(() {
+                              fullName = _fullNameController.text;
+                              bio = _bioController.text;
+                              link = _linkController.text;
+                            });
+                            Navigator.pop(context);  // ปิด bottom sheet
+                          } else {
+                            print("Error updating profile");
+                          }
                         },
                         child: Text(
                           'เสร็จ',
@@ -69,9 +166,7 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         SizedBox(height: 10),
                         TextButton(
-                          onPressed: () {
-                            // Change profile picture
-                          },
+                          onPressed: _pickAndUploadImage,
                           child: Text(
                             'เปลี่ยนรูปโปรไฟล์',
                             style: TextStyle(color: Colors.blue, fontSize: 16),
@@ -85,15 +180,15 @@ class ProfileScreen extends StatelessWidget {
                   // Input Fields
                   _buildEditableField(
                     label: 'ชื่อ',
-                    initialValue: 'เกียร์ที่แปลว่าเก (⊙_⊙) (@gamucosu)',
+                    controller: _fullNameController,
                   ),
                   _buildEditableField(
                     label: 'คำอธิบายตัวเอง',
-                    initialValue: '名: Gear | ギヤ | เกียร์',
+                    controller: _bioController,
                   ),
                   _buildEditableField(
                     label: 'ลิงก์',
-                    initialValue: 'tiktok.com/@gamucosu',
+                    controller: _linkController,
                   ),
                   SizedBox(height: 20),
 
@@ -130,7 +225,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEditableField({required String label, required String initialValue}) {
+  Widget _buildEditableField({required String label, required TextEditingController controller}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Column(
@@ -141,7 +236,7 @@ class ProfileScreen extends StatelessWidget {
             style: TextStyle(color: Colors.grey, fontSize: 14),
           ),
           TextField(
-            controller: TextEditingController(text: initialValue),
+            controller: controller,
             style: TextStyle(color: Colors.white),
             decoration: InputDecoration(
               border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
@@ -154,6 +249,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -162,7 +258,7 @@ class ProfileScreen extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: Colors.black,
           title: Text(
-            'เกียร์ที่แปลว่าเก (⊙_⊙)',
+            fullName ,
             style: TextStyle(fontSize: 18),
           ),
           actions: [
@@ -186,7 +282,7 @@ class ProfileScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.grey[900],
                 ),
-                child: const Column(
+                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircleAvatar(
@@ -195,7 +291,7 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 10),
                     Text(
-                      'gamucosu',
+                      username ,
                       style: TextStyle(color: Colors.white, fontSize: 20),
                     ),
                   ],
@@ -258,7 +354,7 @@ class ProfileScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'gamucosu',
+                              username ,
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 20,
@@ -267,12 +363,12 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             SizedBox(height: 5),
                             Text(
-                              '名: Gear | ギヤ | เกียร์',
+                              bio ,
                               style: TextStyle(color: Colors.grey),
                             ),
                             SizedBox(height: 5),
                             Text(
-                              'ผู้ติดตาม 135 คน · tiktok.com/@gamucosu',
+                              'ผู้ติดตาม 135 คน '+ link,
                               style: TextStyle(color: Colors.grey),
                             ),
                           ],

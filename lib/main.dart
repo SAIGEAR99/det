@@ -1,52 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:det/features/auth/providers/auth_provider.dart';
 import 'package:det/features/auth/screens/login_screen.dart';
 import 'package:det/features/home/screens/home_screen.dart';
-import 'package:det/services/auth_service.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
-class MyApp extends StatefulWidget {
-  @override
-  _MyAppState createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  late Future<bool> _isLoggedIn;
-
-  @override
-  void initState() {
-    super.initState();
-    _isLoggedIn = AuthService().isLoggedIn();
-  }
-
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Instagram Clone',
+      title: 'App Name',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      initialRoute: '/',
+      home: RootScreen(),
       routes: {
-        '/': (context) => FutureBuilder<bool>(
-          future: _isLoggedIn,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            } else if (snapshot.hasData && snapshot.data == true) {
-              return HomeScreen();
-            } else {
-              return LoginScreen();
-            }
-          },
-        ),
         '/login': (context) => LoginScreen(),
         '/home': (context) => HomeScreen(),
       },
     );
   }
 }
+
+class RootScreen extends StatefulWidget {
+  @override
+  _RootScreenState createState() => _RootScreenState();
+}
+
+class _RootScreenState extends State<RootScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    authProvider.loadUser(); // เรียก loadUser เมื่อแอปเริ่มต้น
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+
+    if (authProvider.isLoading) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    } else if (authProvider.isLoggedIn) {
+      return HomeScreen();
+    } else {
+      return LoginScreen();
+    }
+  }
+}
+

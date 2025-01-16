@@ -4,10 +4,10 @@ import 'package:http/http.dart' as http;
 
 class AuthService {
   final _storage = FlutterSecureStorage();
-  static const String _tokenKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';
-  final String baseUrl = 'http://192.168.0.3:3000/api/auth';
+  static const String _tokenKey = 'jwt_token';
+  final String baseUrl = 'http://192.168.0.3:3000/det';
 
-  // ฟังก์ชันล็อกอิน
+
   Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/login'),
@@ -31,6 +31,23 @@ class AuthService {
   // ดึง token
   Future<String?> getToken() async {
     return await _storage.read(key: _tokenKey);
+  }
+
+  // ถอดรหัส JWT
+  Future<Map<String, dynamic>?> decodeToken() async {
+    final token = await getToken();
+
+    if (token == null) return null;
+
+    // แยก JWT ออกเป็น 3 ส่วน: header, payload, signature
+    final parts = token.split('.');
+    if (parts.length != 3) {
+      throw Exception('Invalid JWT');
+    }
+
+    // Decode และแปลง payload เป็น Map
+    final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+    return jsonDecode(payload);
   }
 
   Future<bool> isLoggedIn() async {
