@@ -4,11 +4,12 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:det/features/auth/providers/auth_provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class UserService {
   final _storage = FlutterSecureStorage();
   static const String _tokenKey = 'jwt_token';
-  final String baseUrl = 'http://192.168.0.3:3000/det';
+  final String baseUrl = '${dotenv.env['API_BASE_URL']}/det';
 
   // ฟังก์ชันดึงข้อมูลจาก /user โดยใช้ user_id จาก AuthProvider
   Future<Map<String, dynamic>?> getUserData(BuildContext context) async {
@@ -97,12 +98,13 @@ class UserService {
     final response = await request.send();
     if (response.statusCode == 200) {
       final responseBody = await response.stream.bytesToString();
-      return jsonDecode(responseBody);
+      return jsonDecode(responseBody); // คืนค่ารูปภาพที่อัปเดตกลับมา
     } else {
       print('Error uploading profile picture: ${response.statusCode}');
       return null;
     }
   }
+
 
 
   // ฟังก์ชันดึง JWT จาก Secure Storage

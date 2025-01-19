@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:det/features/auth/providers/auth_provider.dart';
 import 'package:det/services/user.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -16,43 +18,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String username = 'Loading...';
   String email = 'Loading...';
   String fullName = 'Loading...';
-  String profilePicture = 'Loading...';
   String bio = 'Loading...';
   String createdAt = 'Loading...';
   String link = 'Loading...';
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    Provider.of<AuthProvider>(context, listen: false).loadUser().then((_) {
-      _getUserData();
+    Future.microtask(() {
+      // เรียกใช้ AuthProvider เพื่อโหลดข้อมูล User
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      authProvider.loadUser().then((_) {
+        _getUserData(); // โหลดข้อมูลเพิ่มเติมเมื่อ provider พร้อม
+      });
     });
   }
 
   // ฟังก์ชันเรียกข้อมูลจาก API
   void _getUserData() async {
-    final response = await _userService.getUserData(context);  // ส่ง context ไปให้ getUserData
+    final response = await _userService.getUserData(context);
+    print('Response from API: $response');
+
     if (response != null) {
       setState(() {
-        userId = response['user_id'].toString();  // ดึง user_id
-        username = response['username'];  // ดึง username
-        email = response['email'];  // ดึง email
-        fullName = response['full_name'];  // ดึง full_name
-        profilePicture = response['profile_picture'] ?? 'No picture';  // ดึง profile_picture
-        bio = response['bio'] ?? 'No bio';  // ดึง bio
-        createdAt = response['created_at'];
-        link = response['link'];// ดึง created_at
+        userId = response['user_id']?.toString() ?? '';
+        username = response['username'] ?? 'No username';
+        email = response['email'] ?? 'No email';
+        fullName = response['full_name'] ?? 'No full name';
+        bio = response['bio'] ?? 'No bio';
+        createdAt = response['created_at'] ?? 'No created at';
+        link = response['link'] ?? 'No link';
       });
     } else {
+      print('Failed to fetch user data.');
       setState(() {
-        userId = 'Error fetching data';
-        username = 'Error fetching data';
-        email = 'Error fetching data';
-        fullName = 'Error fetching data';
-        profilePicture = 'Error fetching data';
-        bio = 'Error fetching data';
-        createdAt = 'Error fetching data';
-        link = 'Error fetching data';
+        userId = '';
+        username = 'Error';
+        email = 'Error';
+        fullName = 'Error';
+        bio = 'Error';
+        createdAt = 'Error';
+        link = 'Error';
       });
     }
   }
@@ -64,26 +71,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _pickAndUploadImage() async {
     final ImagePicker _picker = ImagePicker();
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-
-    if (image != null) {
-      final response = await _userService.uploadProfilePicture(
-        userId, // ส่ง user_id ที่เก็บไว้
-        image.path,
-      );
-
-      if (response != null) {
-        setState(() {
-          profilePicture = response['profile_picture'];
-        });
-        print('Profile picture updated successfully');
-      } else {
-        print('Error uploading profile picture');
-      }
-    }
   }
 
 
   void _showEditProfileBottomSheet(BuildContext context) {
+
     // TextEditingController สำหรับเก็บค่าที่ผู้ใช้แก้ไข
     final TextEditingController _fullNameController = TextEditingController(text: fullName);
     final TextEditingController _bioController = TextEditingController(text: bio);
@@ -162,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         CircleAvatar(
                           radius: 50,
-                          backgroundImage: AssetImage('assets/profile.jpg'),
+                          backgroundImage: NetworkImage('${dotenv.env['API_BASE_URL']}/det/img/profile/$userId'),
                         ),
                         SizedBox(height: 10),
                         TextButton(
@@ -252,6 +244,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+
+    final authProvider = Provider.of<AuthProvider>(context);
+
+    // รอให้ userId ถูกโหลดจาก AuthProvider
+    if (authProvider.userId == null) {
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // ใช้ userId จาก AuthProvider
+    userId = authProvider.userId ?? '';
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -287,7 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     CircleAvatar(
                       radius: 40,
-                      backgroundImage: AssetImage('assets/profile.jpg'),
+                      backgroundImage: NetworkImage('${dotenv.env['API_BASE_URL']}/det/img/profile/$userId'),
                     ),
                     SizedBox(height: 10),
                     Text(
@@ -346,8 +353,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundImage: AssetImage('assets/profile.jpg'),
+                        backgroundImage:NetworkImage('${dotenv.env['API_BASE_URL']}/det/img/profile/$userId'),
                       ),
+
+
                       SizedBox(width: 20),
                       Expanded(
                         child: Column(
@@ -460,7 +469,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         itemBuilder: (context, index) {
           return ListTile(
             leading: CircleAvatar(
-              backgroundImage: AssetImage('assets/profile.jpg'),
+              backgroundImage: NetworkImage('${dotenv.env['API_BASE_URL']}/det/img/profile/$userId'),
             ),
             title: Text(
               'gamucosu',

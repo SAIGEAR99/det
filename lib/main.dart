@@ -3,8 +3,19 @@ import 'package:provider/provider.dart';
 import 'package:det/features/auth/providers/auth_provider.dart';
 import 'package:det/features/auth/screens/login_screen.dart';
 import 'package:det/features/home/screens/home_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+Future<void> main() async {
+  // โหลดไฟล์ .env ก่อนเริ่มต้นแอป
+  try {
+    await dotenv.load(fileName: ".env");
+    print('Environment variables loaded successfully.');
+
+    print("Loaded API_BASE_URL: ${dotenv.env['API_BASE_URL']}");
+  } catch (e) {
+    print('Error loading .env file: $e');
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -19,7 +30,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'App Name',
+      title: 'det',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -41,8 +52,10 @@ class _RootScreenState extends State<RootScreen> {
   @override
   void initState() {
     super.initState();
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    authProvider.loadUser(); // เรียก loadUser เมื่อแอปเริ่มต้น
+    Future.microtask(() {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      authProvider.loadUser(); // เรียก loadUser เมื่อแอปเริ่มต้น
+    });
   }
 
   @override
@@ -60,4 +73,5 @@ class _RootScreenState extends State<RootScreen> {
     }
   }
 }
+
 

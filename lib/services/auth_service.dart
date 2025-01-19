@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AuthService {
   final _storage = FlutterSecureStorage();
   static const String _tokenKey = 'jwt_token';
-  final String baseUrl = 'http://192.168.0.3:3000/det';
+  final String baseUrl = '${dotenv.env['API_BASE_URL']}/det';
 
 
   Future<Map<String, dynamic>> login(String email, String password) async {
