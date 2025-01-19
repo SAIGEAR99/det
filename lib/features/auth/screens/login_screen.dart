@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:det/services/auth_service.dart';
+import 'package:det/features/auth/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -30,6 +32,10 @@ class _LoginScreenState extends State<LoginScreen> {
           SnackBar(content: Text('Login Successful!')),
         );
 
+        // โหลดข้อมูลผู้ใช้ใหม่ผ่าน AuthProvider
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        await authProvider.loadUser();
+
         Navigator.pushReplacementNamed(context, '/home');
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -42,6 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

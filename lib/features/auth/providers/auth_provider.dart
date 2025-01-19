@@ -31,6 +31,22 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<void> reloadUser() async {
+    try {
+      final decodedToken = await _authService.decodeToken();
+      if (decodedToken != null) {
+        _user = decodedToken; // อัปเดตข้อมูลผู้ใช้ใหม่
+        print('User reloaded: $_user');
+      } else {
+        print('No user data available');
+      }
+    } catch (e) {
+      print('Error reloading user: $e');
+    } finally {
+      notifyListeners(); // แจ้งให้ UI อัปเดตข้อมูล
+    }
+  }
+
   Future<void> logout() async {
     await _authService.logout();
     _user = null;

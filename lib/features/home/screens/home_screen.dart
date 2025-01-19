@@ -15,6 +15,8 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
+
+
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
@@ -29,6 +31,17 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _postController = TextEditingController();
   final FocusNode _postFocusNode = FocusNode();
   final List<File> _selectedImages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      // เรียกใช้ AuthProvider เพื่อโหลดข้อมูล User
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      authProvider.loadUser().then((_) {
+      });
+    });
+  }
 
   void _onItemTapped(int index) {
     if (index == 2) {
@@ -155,6 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               images: _selectedImages,
                             );
                             Navigator.pop(context);
+                            await authProvider.reloadUser();
                           }
                         },
                         style: ElevatedButton.styleFrom(

@@ -6,7 +6,7 @@ import 'package:det/features/home/screens/home_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
-  // โหลดไฟล์ .env ก่อนเริ่มต้นแอป
+
   try {
     await dotenv.load(fileName: ".env");
     print('Environment variables loaded successfully.');

@@ -1,209 +1,324 @@
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:audio_waveforms/audio_waveforms.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:det/features/auth/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 
-class HomeContentScreen extends StatelessWidget {
-  final List<Map<String, dynamic>> posts = [
-    {
-      'username': 'justina.xiecl0624',
-      'time': '4 ชม.',
-      'content': 'โพสต์ข้อความพร้อมรูปภาพที่เลื่อนได้',
-      'images': ['assets/post_1.jpg', 'assets/post_2.jpg'],
-      'likes': 246,
-      'comments': 3,
-      'shares': 3,
-    },  {
-      'username': 'justina.xiecl0624',
-      'time': '4 ชม.',
-      'content': 'โพสต์ข้อความพร้อมรูปภาพที่เลื่อนได้V2',
-      'images': ['assets/post_3.jpg', 'assets/post_2.jpg'],
-      'likes': 246,
-      'comments': 3,
-      'shares': 3,
-    },
-    {
-      'username': 'comi1.4',
-      'time': '6 ชม.',
-      'content': 'อะไรอะ 😟😟 SOS SOS',
-      'audio': 'assets/audio_3.mp3', // ไฟล์เสียง
-      'likes': 63,
-      'comments': 8,
-      'shares': 4,
-    },
-  ];
+class HomeContentScreen extends StatefulWidget {
+  @override
+  _HomeContentScreenState createState() => _HomeContentScreenState();
+}
+
+class _HomeContentScreenState extends State<HomeContentScreen> {
+  List<Map<String, dynamic>> posts = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      // เรียกใช้ AuthProvider เพื่อโหลดข้อมูล User
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      authProvider.loadUser().then((_) {
+      });
+    });
+    _fetchPosts();
+  }
+
+  Future<void> _fetchPosts() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.userId;
+
+    if (userId == null) {
+      print('User ID not found.');
+      return;
+    }
+
+    final String apiUrl =
+        '${dotenv.env['API_BASE_URL']}/det/post/getAllPosts?user_id=$userId';
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          posts = List<Map<String, dynamic>>.from(data);
+          isLoading = false;
+        });
+      } else {
+        print('Failed to load posts: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching posts: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
+    return isLoading
+        ? Center(child: CircularProgressIndicator())
+        : ListView.builder(
       itemCount: posts.length,
       itemBuilder: (context, index) {
         final post = posts[index];
-        return Container(
-          margin: EdgeInsets.symmetric(vertical: 8),
-          color: Colors.black,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ส่วนแสดง User และเวลาที่โพสต์
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundImage: AssetImage('assets/profile.jpg'),
-                      radius: 20,
-                    ),
-                    SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          post['username'],
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          post['time'],
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                    Spacer(),
-                    Icon(Icons.more_vert, color: Colors.white),
-                  ],
-                ),
-              ),
-              // ข้อความโพสต์
-              if (post.containsKey('content'))
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 65.0, vertical: 8.0),
-                  child: Text(
-                    post['content'],
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              // เล่นไฟล์เสียงพร้อม waveform
-              if (post.containsKey('audio'))
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 65.0, vertical: 8.0),
-                  child: AudioPlayerWidget(audioPath: post['audio']),
-                ),
-              // รูปภาพโพสต์
-              if (post.containsKey('images'))
-                Padding(
-                  padding: const EdgeInsets.only(left: 0),
-                  child: SizedBox(
-                    height: MediaQuery.of(context).size.width - 128,
-                    child: PageView.builder(
-                      controller: PageController(viewportFraction: 0.72),
-                      physics: ClampingScrollPhysics(),
-                      itemCount: post['images'].length,
-                      itemBuilder: (context, imageIndex) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.asset(
-                              post['images'][imageIndex],
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              // แสดงจำนวนถูกใจ คอมเมนต์ แชร์
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 65.0, vertical: 8.0),
-                child: Row(
-                  children: [
-                    Icon(Icons.favorite_border, color: Colors.grey, size: 20),
-                    SizedBox(width: 4),
-                    Text('${post['likes']}', style: TextStyle(color: Colors.grey)),
-                    SizedBox(width: 16),
-                    Icon(Icons.chat_bubble_outline, color: Colors.grey, size: 20),
-                    SizedBox(width: 4),
-                    Text('${post['comments']}', style: TextStyle(color: Colors.grey)),
-                    SizedBox(width: 16),
-                    Icon(Icons.share, color: Colors.grey, size: 20),
-                    SizedBox(width: 4),
-                    Text('${post['shares']}', style: TextStyle(color: Colors.grey)),
-                  ],
-                ),
-              ),
-              Divider(color: Colors.grey[800]),
-            ],
-          ),
-        );
+        return PostWidget(post: post);
       },
     );
   }
 }
 
-class AudioPlayerWidget extends StatefulWidget {
-  final String audioPath;
+class PostWidget extends StatefulWidget {
+  final Map<String, dynamic> post;
 
-  const AudioPlayerWidget({required this.audioPath});
+  const PostWidget({required this.post});
 
   @override
-  _AudioPlayerWidgetState createState() => _AudioPlayerWidgetState();
+  _PostWidgetState createState() => _PostWidgetState();
 }
 
-class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
-  late PlayerController _playerController;
+class _PostWidgetState extends State<PostWidget> {
+  late bool isLiked;
+  late int likeCount;
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize PlayerController
-    _playerController = PlayerController();
-
-    // Prepare the audio file and waveform
-    _playerController.preparePlayer(
-      path: widget.audioPath,
-      shouldExtractWaveform: true, // Generates the waveform
-    );
+    isLiked = widget.post['isLiked'] ?? false; // Get initial like state from API
+    likeCount = widget.post['likeCount'] ?? 0; // Get initial like count from API
   }
 
-  @override
-  void dispose() {
-    _playerController.dispose();
-    super.dispose();
+  Future<void> _toggleLike(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.userId;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('กรุณาเข้าสู่ระบบเพื่อกดถูกใจ')),
+      );
+      return;
+    }
+
+    final String apiUrl = '${dotenv.env['API_BASE_URL']}/det/post/like';
+    final isLikeAction = !isLiked; // Determine the new like state
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        body: jsonEncode({
+          'user_id': userId,
+          'post_id': widget.post['post_id'],
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        setState(() {
+          isLiked = responseData['isLiked'];
+          likeCount = responseData['likeCount'];
+        });
+      } else {
+        print('Failed to update like: ${response.statusCode}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ไม่สามารถอัพเดตการถูกใจได้')),
+        );
+      }
+    } catch (e) {
+      print('Error updating like: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาดในการอัพเดตการถูกใจ')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          icon: Icon(Icons.play_arrow, color: Colors.white),
-          onPressed: () {
-            _playerController.startPlayer();
-          },
-        ),
-        IconButton(
-          icon: Icon(Icons.pause, color: Colors.white),
-          onPressed: () {
-            _playerController.pausePlayer();
-          },
-        ),
-        Expanded(
-          child: AudioFileWaveforms(
-            playerController: _playerController,
-            size: Size(MediaQuery.of(context).size.width * 0.7, 50),
-            waveformType: WaveformType.long,
-            playerWaveStyle: const PlayerWaveStyle(
-              fixedWaveColor: Colors.grey,
-              liveWaveColor: Colors.blue,
-              waveCap: StrokeCap.round,
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isOwner = authProvider.userId == widget.post['user_id'].toString();
+
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      color: Colors.black,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // User and timestamp section
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundImage: NetworkImage(
+                    '${dotenv.env['API_BASE_URL']}/det/img/profile/${widget.post['user_id']}',
+                  ),
+                  radius: 20,
+                ),
+                SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.post['username'],
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      _formatTime(widget.post['created_at']),
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ],
+                ),
+                Spacer(),
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'delete') {
+                      _deletePost(context, widget.post['post_id']);
+                    } else if (value == 'report') {
+                      _reportPost(context, widget.post['post_id']);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    if (isOwner)
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text('ลบโพสต์'),
+                      ),
+                    PopupMenuItem(
+                      value: 'report',
+                      child: Text('รายงาน'),
+                    ),
+                  ],
+                  icon: Icon(Icons.more_vert, color: Colors.white),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          // Post content
+          if (widget.post['content'] != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 65.0, vertical: 8.0),
+              child: Text(
+                widget.post['content'],
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          // Post images
+          if (widget.post['images'] != null && widget.post['images'].isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 0),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.width - 128,
+                child: PageView.builder(
+                  controller: PageController(viewportFraction: 0.72),
+                  physics: ClampingScrollPhysics(),
+                  itemCount: widget.post['images'].length,
+                  itemBuilder: (context, imageIndex) {
+                    final imageUrl = widget.post['images'][imageIndex]['url'];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey,
+                              child: Center(
+                                child: Icon(Icons.broken_image, color: Colors.white),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          // Post likes, comments, shares
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 65.0, vertical: 8.0),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => _toggleLike(context),
+                  child: Icon(
+                    isLiked ? Icons.favorite : Icons.favorite_border,
+                    color: isLiked ? Colors.red : Colors.grey,
+                    size: 20,
+                  ),
+                ),
+                SizedBox(width: 4),
+                Text('$likeCount', style: TextStyle(color: Colors.grey)),
+                SizedBox(width: 16),
+                Icon(Icons.chat_bubble_outline, color: Colors.grey, size: 20),
+                SizedBox(width: 4),
+                Text('0', style: TextStyle(color: Colors.grey)),
+                SizedBox(width: 16),
+                Icon(Icons.share, color: Colors.grey, size: 20),
+                SizedBox(width: 4),
+                Text('0', style: TextStyle(color: Colors.grey)),
+              ],
+            ),
+          ),
+          Divider(color: Colors.grey[800]),
+        ],
+      ),
     );
   }
+
+  void _deletePost(BuildContext context, String postId) async {
+    final String apiUrl = '${dotenv.env['API_BASE_URL']}/det/post/delete';
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        body: jsonEncode({'post_id': postId}),
+        headers: {'Content-Type': 'application/json'},
+      );
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('โพสต์ถูกลบเรียบร้อยแล้ว')),
+        );
+        final homeContentScreenState =
+        context.findAncestorStateOfType<_HomeContentScreenState>();
+        homeContentScreenState?._fetchPosts();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ลบโพสต์ไม่สำเร็จ')),
+        );
+      }
+    } catch (e) {
+      print('Error deleting post: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาดในการลบโพสต์')),
+      );
+    }
+  }
+
+  void _reportPost(BuildContext context, String postId) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('รายงานโพสต์สำเร็จ')),
+    );
+  }
+
+  String _formatTime(String isoTime) {
+    final DateTime time = DateTime.parse(isoTime);
+    final Duration diff = DateTime.now().difference(time);
+
+    if (diff.inSeconds < 60) return '${diff.inSeconds} วินาทีที่แล้ว';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
+    if (diff.inHours < 24) return '${diff.inHours} ชั่วโมงที่แล้ว';
+    return '${diff.inDays} วันที่แล้ว';
+  }
 }
+
+
