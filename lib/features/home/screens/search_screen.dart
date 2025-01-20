@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -7,16 +10,42 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> searchResults = [];
+  bool isLoading = false;
 
-  List<Map<String, String>> users = [
-    {'name': 'akatsukibxx', 'bio': 'บออนอ', 'followers': '56'},
-    {'name': 'ijae.__.young', 'bio': 'Луму', 'followers': '11'},
-    {'name': 'pang_gzz', 'bio': 'Pang Jiko', 'followers': '137'},
-    {'name': 'rule34sigmahacker', 'bio': 'M_NAX', 'followers': '60'},
-    {'name': 'kagayaku.hoshi.th', 'bio': 'Kagayaku Hoshi', 'followers': '37'},
-    {'name': 'ultrakungg', 'bio': '⸸⸸ NONGTA • . ⸸⸸', 'followers': '26'},
-    {'name': 'khing_ne', 'bio': 'KhingNe.', 'followers': '69'},
-  ];
+  Future<void> _searchUsers(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        searchResults = [];
+      });
+      return;
+    }
+
+    final String apiUrl = '${dotenv.env['API_BASE_URL']}/det/search?query=$query';
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          searchResults = List<Map<String, dynamic>>.from(data);
+        });
+      } else {
+        print('Error fetching search results: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error searching users: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,44 +59,56 @@ class _SearchScreenState extends State<SearchScreen> {
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Colors.white,  // ทำให้ "ค้นหา" เป็นสีขาว
+            color: Colors.white,
           ),
         ),
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: TextField(
-              controller: _searchController,
-              style: TextStyle(color: Colors.white),
-              cursorColor: Colors.white,
-              decoration: InputDecoration(
-                hintText: 'ค้นหา',
-                hintStyle: TextStyle(color: Colors.grey),
-                filled: true,
-                fillColor: Colors.grey[900],
-                prefixIcon: Icon(Icons.search, color: Colors.grey),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0), // กำหนด Padding
+            child: Align(
+              alignment: Alignment.center, // จัดให้อยู่ตรงกลาง
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width * 0.93,
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _searchUsers, // ยังคงทำงานเหมือนเดิม
+                  style: TextStyle(color: Colors.white),
+                  cursorColor: Colors.white,
+                  decoration: InputDecoration(
+                    hintText: 'ค้นหา',
+                    hintStyle: TextStyle(color: Colors.grey),
+                    filled: true,
+                    fillColor: Colors.grey[900],
+                    prefixIcon: Icon(Icons.search, color: Colors.grey),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20), // ปรับขอบให้โค้งมน
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-          Expanded(
+
+          isLoading
+              ? Center(child: CircularProgressIndicator())
+              : Expanded(
             child: ListView.builder(
-              itemCount: users.length,
+              itemCount: searchResults.length,
               itemBuilder: (context, index) {
-                final user = users[index];
+                final user = searchResults[index];
                 return ListTile(
-                  dense: true,  // ลดความสูงของ ListTile
                   leading: CircleAvatar(
-                    backgroundImage: AssetImage('assets/profile.jpg'),
-                    radius: 20,  // ลดขนาดภาพโปรไฟล์เล็กน้อย
+                    backgroundImage: user['profile_img'] != null
+                        ? NetworkImage('${user['profile_img']}?timestamp=${DateTime.now().millisecondsSinceEpoch}')
+                        : AssetImage('assets/profile_placeholder.png')
+                    as ImageProvider,
+                    radius: 25,
                   ),
                   title: Text(
-                    user['name']!,
+                    user['username'],
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -78,11 +119,13 @@ class _SearchScreenState extends State<SearchScreen> {
                     style: TextStyle(color: Colors.grey),
                   ),
                   trailing: OutlinedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      // Add follow/unfollow functionality
+                    },
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: Colors.white),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     child: Text(
@@ -90,9 +133,9 @@ class _SearchScreenState extends State<SearchScreen> {
                       style: TextStyle(color: Colors.white),
                     ),
                   ),
-                  contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 12),  // ลด vertical padding
+                  contentPadding:
+                  EdgeInsets.symmetric(vertical: 1, horizontal: 18),
                 );
-                ;
               },
             ),
           ),

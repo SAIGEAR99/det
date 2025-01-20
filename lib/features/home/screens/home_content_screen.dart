@@ -154,9 +154,9 @@ class _PostWidgetState extends State<PostWidget> {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundImage: NetworkImage(
-                    '${dotenv.env['API_BASE_URL']}/det/img/profile/${widget.post['user_id']}',
-                  ),
+            backgroundImage: NetworkImage(
+              '${dotenv.env['API_BASE_URL']}/det/img/profile/${widget.post['user_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+            ),
                   radius: 20,
                 ),
                 SizedBox(width: 10),
@@ -264,7 +264,7 @@ class _PostWidgetState extends State<PostWidget> {
                 SizedBox(width: 4),
                 Text('0', style: TextStyle(color: Colors.grey)),
                 SizedBox(width: 16),
-                Icon(Icons.share, color: Colors.grey, size: 20),
+                Icon(Icons.autorenew, color: Colors.grey, size: 20),
                 SizedBox(width: 4),
                 Text('0', style: TextStyle(color: Colors.grey)),
               ],

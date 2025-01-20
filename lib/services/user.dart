@@ -87,24 +87,41 @@ class UserService {
   }
 
   Future<Map<String, dynamic>?> uploadProfilePicture(String userId, String filePath) async {
-    final token = await getToken();
-    if (token == null) return null;
+    try {
+      final token = await getToken(); // Get the token for authorization
+      if (token == null) {
+        print('Error: Token not found.');
+        return null;
+      }
 
-    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/img/upload_profile'));
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['user_id'] = userId;
-    request.files.add(await http.MultipartFile.fromPath('image', filePath));
+      // Prepare multipart request
+      final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/img/upload_profile'));
+      request.headers['Authorization'] = 'Bearer $token'; // Authorization header
+      request.fields['user_id'] = userId; // Add user_id field
+      request.files.add(await http.MultipartFile.fromPath('image', filePath)); // Add image file
 
-    final response = await request.send();
-    if (response.statusCode == 200) {
-      final responseBody = await response.stream.bytesToString();
-      return jsonDecode(responseBody); // คืนค่ารูปภาพที่อัปเดตกลับมา
-    } else {
-      print('Error uploading profile picture: ${response.statusCode}');
+      print('Request Fields: ${request.fields}');
+      print('Request Files: ${request.files}');
+
+      // Send the request
+      final response = await request.send();
+
+      // Process response
+      if (response.statusCode == 200) {
+        final responseBody = await response.stream.bytesToString();
+        print('Profile picture uploaded successfully.');
+        return jsonDecode(responseBody); // Parse JSON response
+      } else {
+        print('Error uploading profile picture: ${response.statusCode} - ${response.reasonPhrase}');
+        final errorBody = await response.stream.bytesToString();
+        print('Response body: $errorBody');
+        return null;
+      }
+    } catch (e) {
+      print('Exception occurred while uploading profile picture: $e');
       return null;
     }
   }
-
 
 
   // ฟังก์ชันดึง JWT จาก Secure Storage

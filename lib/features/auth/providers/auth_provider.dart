@@ -8,7 +8,7 @@ class AuthProvider with ChangeNotifier {
 
   // สร้าง getter สำหรับดึง user_id และ username
   String? get userId => _user?['id']?.toString();  // แปลง 'id' จาก int เป็น String
-  String? get username => _user?['email']; // ใช้ 'email' จาก _user แทน
+  String? get email => _user?['email']; // ใช้ 'email' จาก _user แทน
   bool get isLoading => _isLoading;
 
   Future<void> loadUser() async {

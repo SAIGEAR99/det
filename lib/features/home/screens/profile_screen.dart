@@ -5,6 +5,11 @@ import 'package:det/features/auth/providers/auth_provider.dart';
 import 'package:det/services/user.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:det/features/home/screens/home_content_screen.dart';
+
+
 
 
 class ProfileScreen extends StatefulWidget {
@@ -68,10 +73,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.pushReplacementNamed(context, '/login');
   }
 
-  void _pickAndUploadImage() async {
+  Future<void> _pickAndUploadImage() async {
     final ImagePicker _picker = ImagePicker();
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      print('Selected image path: ${image.path}');
+      print('User ID: $userId'); // Ensure this prints a valid userId
+
+      final response = await _userService.uploadProfilePicture(
+        userId, // Ensure this is not null
+        image.path,
+      );
+
+      if (response != null) {
+        setState(() {
+          print('Profile picture updated successfully: ${response['user']}');
+        });
+      } else {
+        print('Failed to upload profile picture');
+      }
+    } else {
+      print('No image selected');
+    }
   }
+
+
 
 
   void _showEditProfileBottomSheet(BuildContext context) {
@@ -154,8 +181,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         CircleAvatar(
                           radius: 50,
-                          backgroundImage: NetworkImage('${dotenv.env['API_BASE_URL']}/det/img/profile/$userId'),
-                        ),
+                      backgroundImage: NetworkImage(
+                        '${dotenv.env['API_BASE_URL']}/det/img/profile/$userId?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                      ),
+                    ),
                         SizedBox(height: 10),
                         TextButton(
                           onPressed: _pickAndUploadImage,
@@ -264,10 +293,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.black,
-          title: Text(
-            fullName ,
-            style: TextStyle(fontSize: 18),
-          ),
+            title: Text(
+              fullName,
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[700], // เปลี่ยนสีข้อความเป็นสีขาว
+              ),
+            ),
           actions: [
             Builder(
               builder: (context) => IconButton(
@@ -294,7 +326,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     CircleAvatar(
                       radius: 40,
-                      backgroundImage: NetworkImage('${dotenv.env['API_BASE_URL']}/det/img/profile/$userId'),
+                      backgroundImage: NetworkImage(
+                        '${dotenv.env['API_BASE_URL']}/det/img/profile/$userId?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                      ),
                     ),
                     SizedBox(height: 10),
                     Text(
@@ -353,9 +387,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundImage:NetworkImage('${dotenv.env['API_BASE_URL']}/det/img/profile/$userId'),
+                    backgroundImage: NetworkImage(
+                      '${dotenv.env['API_BASE_URL']}/det/img/profile/$userId?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                    ),
                       ),
-
 
                       SizedBox(width: 20),
                       Expanded(
@@ -460,30 +495,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<List<Map<String, dynamic>>> _fetchUserPosts() async {
+    final String apiUrl = '${dotenv.env['API_BASE_URL']}/det/post/getAllPosts?user_id=$userId';
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+
+        // กรองโพสต์เฉพาะของผู้ใช้
+        return data
+            .where((post) => post['user_id'].toString() == userId)
+            .toList()
+            .cast<Map<String, dynamic>>();
+      } else {
+        print('Failed to load user posts: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Error fetching user posts: $e');
+      return [];
+    }
+  }
+
+
   // เธรดแท็บ
   Widget _buildThreadTab() {
-    return Container(
-      color: Colors.black,
-      child: ListView.builder(
-        itemCount: 5,
-        itemBuilder: (context, index) {
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundImage: NetworkImage('${dotenv.env['API_BASE_URL']}/det/img/profile/$userId'),
-            ),
-            title: Text(
-              'gamucosu',
-              style: TextStyle(color: Colors.white),
-            ),
-            subtitle: Text(
-              'มีอะไรมาเล่าสู่กันฟังไหม',
-              style: TextStyle(color: Colors.white70),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _fetchUserPosts(), // ดึงโพสต์ของผู้ใช้
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'เกิดข้อผิดพลาดในการโหลดโพสต์',
+              style: TextStyle(color: Colors.grey),
             ),
           );
-        },
-      ),
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Text(
+              'ยังไม่มีโพสต์',
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        } else {
+          final userPosts = snapshot.data!;
+          return ListView.builder(
+            itemCount: userPosts.length,
+            itemBuilder: (context, index) {
+              final post = userPosts[index];
+              return PostWidget(post: post); // ใช้ PostWidget แสดงโพสต์
+            },
+          );
+        }
+      },
     );
   }
+
 
   // ตอบกลับแท็บ
   Widget _buildReplyTab() {

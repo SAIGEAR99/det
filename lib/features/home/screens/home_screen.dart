@@ -80,16 +80,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Stack(
+                    alignment: Alignment.center,
                     children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Text(
-                          'ยกเลิก',
-                          style: TextStyle(color: Colors.white, fontSize: 18),
+                      // ยกเลิก (ซ้าย)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Text(
+                            'ยกเลิก',
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
                         ),
                       ),
+                      // ข้อความตรงกลาง
                       Text(
                         'โพสต์ใหม่',
                         style: TextStyle(
@@ -98,9 +103,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Icon(Icons.more_vert, color: Colors.white),
+                      // ไอคอน (ขวา)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Icon(Icons.more_vert, color: Colors.white),
+                      ),
                     ],
                   ),
+
                   SizedBox(height: 20),
 
                   // Text Field
