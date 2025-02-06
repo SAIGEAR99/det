@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:det/features/auth/providers/auth_provider.dart';
 import 'package:det/features/auth/screens/login_screen.dart';
 import 'package:det/features/home/screens/home_screen.dart';
+import 'package:det/features/auth/screens/register_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
@@ -38,6 +39,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => LoginScreen(),
         '/home': (context) => HomeScreen(),
+        '/register': (context) => RegisterScreen(),
       },
     );
   }

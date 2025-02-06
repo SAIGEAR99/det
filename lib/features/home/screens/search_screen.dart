@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:det/features/home/widgets/user_profile_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -47,6 +48,15 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
+  void _navigateToUserProfile(Map<String, dynamic> user) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserProfileScreen(user: user),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,14 +76,14 @@ class _SearchScreenState extends State<SearchScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0), // กำหนด Padding
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
             child: Align(
-              alignment: Alignment.center, // จัดให้อยู่ตรงกลาง
+              alignment: Alignment.center,
               child: SizedBox(
                 width: MediaQuery.of(context).size.width * 0.93,
                 child: TextField(
                   controller: _searchController,
-                  onChanged: _searchUsers, // ยังคงทำงานเหมือนเดิม
+                  onChanged: _searchUsers,
                   style: TextStyle(color: Colors.white),
                   cursorColor: Colors.white,
                   decoration: InputDecoration(
@@ -83,7 +93,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     fillColor: Colors.grey[900],
                     prefixIcon: Icon(Icons.search, color: Colors.grey),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20), // ปรับขอบให้โค้งมน
+                      borderRadius: BorderRadius.circular(20),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -91,7 +101,6 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
           ),
-
           isLoading
               ? Center(child: CircularProgressIndicator())
               : Expanded(
@@ -100,11 +109,11 @@ class _SearchScreenState extends State<SearchScreen> {
               itemBuilder: (context, index) {
                 final user = searchResults[index];
                 return ListTile(
+                  onTap: () => _navigateToUserProfile(user),
                   leading: CircleAvatar(
                     backgroundImage: user['profile_img'] != null
                         ? NetworkImage('${user['profile_img']}?timestamp=${DateTime.now().millisecondsSinceEpoch}')
-                        : AssetImage('assets/profile_placeholder.png')
-                    as ImageProvider,
+                        : AssetImage('assets/profile_placeholder.png') as ImageProvider,
                     radius: 25,
                   ),
                   title: Text(
@@ -133,8 +142,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       style: TextStyle(color: Colors.white),
                     ),
                   ),
-                  contentPadding:
-                  EdgeInsets.symmetric(vertical: 1, horizontal: 18),
+                  contentPadding: EdgeInsets.symmetric(vertical: 1, horizontal: 18),
                 );
               },
             ),

@@ -87,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             controller: _emailController,
                             style: TextStyle(color: Colors.white),
                             decoration: InputDecoration(
-                              labelText: 'ชื่อผู้ใช้งาน หรืออีเมล',
+                              labelText: 'อีเมล',
                               labelStyle: TextStyle(color: Colors.white70),
                               prefixIcon: Icon(Icons.person, color: Colors.white70),
                               filled: true,
@@ -99,12 +99,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'กรุณาใส่อีเมลหรือชื่อผู้ใช้';
+                                return 'กรุณาใส่อีเมลของคุณ';
                               }
                               return null;
                             },
                           ),
-                          SizedBox(height: 20),
+                          SizedBox(height: 15),
 
                           // ช่องกรอกรหัสผ่าน
                           TextFormField(
@@ -129,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               return null;
                             },
                           ),
-                          SizedBox(height: 20),
+                          SizedBox(height: 35),
 
                           // ปุ่มล็อกอิน
                           _isLoading
@@ -138,16 +138,22 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: _login,
                             child: Text(
                               'เข้าสู่ระบบ',
-                              style: TextStyle(fontSize: 18),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: Size(double.infinity, 50),
-                              backgroundColor: Colors.blueAccent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.black, // กำหนดตัวหนังสือเป็นสีดำ
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white, // พื้นหลังของปุ่มเป็นสีขาว
+                              padding: EdgeInsets.symmetric(vertical: 16), // เพิ่ม Padding
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10), // มุมโค้งมน
+                              ),
+                              minimumSize: Size(double.infinity, 50), // ปรับปุ่มให้เต็มความกว้าง
+                            ),
+                          )
+                          ,
                           SizedBox(height: 20),
 
                           // ลิงก์ลืมรหัสผ่าน

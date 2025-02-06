@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:det/features/auth/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:det/features/home/widgets/user_profile_screen.dart';
 
 class HomeContentScreen extends StatefulWidget {
   @override
@@ -149,15 +150,34 @@ class _PostWidgetState extends State<PostWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // User and timestamp section
+          // User and timestamp section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               children: [
-                CircleAvatar(
-            backgroundImage: NetworkImage(
-              '${dotenv.env['API_BASE_URL']}/det/img/profile/${widget.post['user_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}',
-            ),
-                  radius: 20,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => UserProfileScreen(
+                          user: {
+                            'user_id': widget.post['user_id'],
+                            'username': widget.post['username'],
+                            'profile_img': '${dotenv.env['API_BASE_URL']}/det/img/profile/${widget.post['user_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                            'bio': widget.post['bio'] ?? '',
+                            'followers': widget.post['followers'] ?? 0,
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  child: CircleAvatar(
+                    backgroundImage: NetworkImage(
+                      '${dotenv.env['API_BASE_URL']}/det/img/profile/${widget.post['user_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                    ),
+                    radius: 20,
+                  ),
                 ),
                 SizedBox(width: 10),
                 Column(
@@ -201,6 +221,7 @@ class _PostWidgetState extends State<PostWidget> {
               ],
             ),
           ),
+
           // Post content
           if (widget.post['content'] != null)
             Padding(
