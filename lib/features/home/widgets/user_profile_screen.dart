@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
+import 'package:det/features/auth/providers/auth_provider.dart';
+import 'package:det/features/home/screens/home_content_screen.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -13,28 +16,108 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  late String username;
+  late String fullName;
   late String profileImg;
   late String bio;
   late int followers;
   late String link;
-  bool isLoading = true; // เพิ่มตัวแปรเพื่อแสดงสถานะโหลดข้อมูล
+
+  bool isUserLoading = true;
+  bool isPostLoading = true;
+  bool isFollowing = false;
+  bool isLoadingFollowStatus = true;
+
+  List<Map<String, dynamic>> userPosts = [];
 
   @override
   void initState() {
     super.initState();
-    // ใช้ค่าที่รับมาแสดงก่อน
-    username = widget.user['username'] ?? 'ไม่พบชื่อผู้ใช้';
-    profileImg = widget.user['profile_img'] ?? '';
-    bio = widget.user['bio'] ?? 'ไม่มีข้อมูล';
-    followers = widget.user['followers'] ?? 0;
-    link = widget.user['link'] ?? 'ไม่มีลิงก์';
+    Future.microtask(() {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final String sessionUserId = authProvider.userId ?? '';
 
-    // ดึงข้อมูลอัปเดตจาก API
-    _fetchUpdatedUserData();
+      setState(() {
+        fullName = widget.user['full_name'] ?? 'ไม่พบชื่อ';
+        profileImg = widget.user['profile_img'] ?? '';
+        bio = widget.user['bio'] ?? 'ไม่มีข้อมูล';
+        followers = widget.user['followers'] ?? 0;
+        link = widget.user['link'] ?? '';
+      });
+      _checkFollowStatus(sessionUserId);
+      _fetchUpdatedUserData();
+      _fetchUserPosts();
+    });
+  }
+
+  Future<void> _checkFollowStatus(String sessionUserId) async {
+    if (sessionUserId.isEmpty) return;
+    final String apiUrl =
+        '${dotenv.env['API_BASE_URL']}/det/follow/status?follower_id=$sessionUserId&following_id=${widget.user['user_id']}';
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print("🔍 Follow Status Response: $data");
+
+        setState(() {
+          isFollowing = data['is_following'] ?? false;
+          isLoadingFollowStatus = false;
+        });
+      } else {
+        print("❌ Failed to get follow status: ${response.statusCode}");
+        setState(() {
+          isLoadingFollowStatus = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error checking follow status: $e');
+      setState(() {
+        isLoadingFollowStatus = false;
+      });
+    }
+  }
+
+
+  Future<void> _toggleFollow() async {
+    if (isLoadingFollowStatus) return;
+    setState(() {
+      isLoadingFollowStatus = true;
+    });
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final String sessionUserId = authProvider.userId ?? '';
+    if (sessionUserId.isEmpty) return;
+
+    final String apiUrl = '${dotenv.env['API_BASE_URL']}/det/follow/toggle';
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        body: jsonEncode({
+          "follower_id": sessionUserId,
+          "following_id": widget.user['user_id']
+        }),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          isFollowing = !isFollowing;
+          followers += isFollowing ? 1 : -1;
+        });
+      }
+    } catch (e) {
+      print('Error toggling follow status: $e');
+    } finally {
+      _checkFollowStatus(sessionUserId);
+    }
   }
 
   Future<void> _fetchUpdatedUserData() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final String sessionUserId = authProvider.userId ?? '';
+
     final String apiUrl =
         '${dotenv.env['API_BASE_URL']}/det/user/fetch?user_id=${widget.user['user_id']}';
 
@@ -44,21 +127,55 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
+          fullName = data['full_name'] ?? fullName;
           bio = data['bio'] ?? bio;
           followers = data['followers'] ?? followers;
           link = data['link'] ?? link;
-          isLoading = false; // โหลดข้อมูลเสร็จแล้ว
+          profileImg = data['profile_img'] ?? profileImg;
+          isUserLoading = false;
         });
+
+        _checkFollowStatus(sessionUserId);
       } else {
-        print('Error fetching user data: ${response.statusCode}');
         setState(() {
-          isLoading = false;
+          isUserLoading = false;
         });
       }
     } catch (e) {
-      print('Error fetching user data: $e');
       setState(() {
-        isLoading = false;
+        isUserLoading = false;
+      });
+    }
+  }
+
+
+
+  Future<void> _fetchUserPosts() async {
+    final String userId = widget.user['user_id'].toString();
+    final String apiUrl =
+        '${dotenv.env['API_BASE_URL']}/det/post/getAllPosts';
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          userPosts = data
+              .where((post) => post['user_id'].toString() == userId)
+              .toList()
+              .cast<Map<String, dynamic>>();
+          isPostLoading = false;
+        });
+      } else {
+        print('Failed to load posts: ${response.statusCode}');
+        setState(() {
+          isPostLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching posts: $e');
+      setState(() {
+        isPostLoading = false;
       });
     }
   }
@@ -70,95 +187,152 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
-        title: isLoading
-            ? Text('Loading...', style: TextStyle(color: Colors.grey)) // แสดง Loading...
-            : Text(username, style: TextStyle(color: Colors.white)),
+        title: isUserLoading
+            ? Text('Loading...', style: TextStyle(color: Colors.grey))
+            : Text(widget.user['username'] ?? 'ไม่พบชื่อผู้ใช้',
+            style: TextStyle(color: Colors.white)),
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator()) // แสดง Indicator ระหว่างโหลดข้อมูล
-          : SingleChildScrollView(
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundImage: profileImg.isNotEmpty
-                        ? NetworkImage('$profileImg?timestamp=${DateTime.now().millisecondsSinceEpoch}')
-                        : AssetImage('assets/profile_placeholder.png') as ImageProvider,
-                  ),
-                  SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(username, style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                        SizedBox(height: 5),
-                        Text(bio, style: TextStyle(color: Colors.grey)),
-                        SizedBox(height: 5),
+
+      body: isUserLoading
+          ? Center(child: CircularProgressIndicator())
+          : Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundImage: profileImg.isNotEmpty
+                      ? NetworkImage(
+                    '${dotenv.env['API_BASE_URL']}/det/img/profile/${widget.user['user_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                  )
+                      : null,
+                  onBackgroundImageError: (_, __) {
+                    setState(() {
+                      profileImg = '';
+                    });
+                  },
+                  child: profileImg.isEmpty
+                      ? Icon(Icons.person, size: 50, color: Colors.grey)
+                      : null,
+                ),
+                SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(fullName,
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold)),
+                      SizedBox(height: 5),
+                      Text(bio, style: TextStyle(color: Colors.grey)),
+                      SizedBox(height: 5),
+                      if (followers > 0 || link.isNotEmpty)
                         Text(
-                          'ผู้ติดตาม $followers คน' + (link.isNotEmpty ? '\n$link' : ''),
+                          'ผู้ติดตาม $followers คน${link.isNotEmpty ? ' • $link' : ''}',
                           style: TextStyle(color: Colors.grey),
                         ),
-
-                      ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Add follow functionality here
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: Provider.of<AuthProvider>(context, listen: false).userId == widget.user['user_id']
+                  ? OutlinedButton(
+                onPressed: () {
+                  // การแชร์โปรไฟล์
+                  print('แชร์โปรไฟล์ของฉัน');
+                },
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  side: BorderSide(color: Colors.white, width: 1.5), // ขอบสีขาว
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('ติดตาม', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+                child: Text(
+                  'แชร์โปรไฟล์',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              )
+                  : isFollowing
+                  ? OutlinedButton(
+                onPressed: isLoadingFollowStatus ? null : _toggleFollow,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  side: BorderSide(color: Colors.white, width: 1.5),
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'กำลังติดตาม',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              )
+                  : ElevatedButton(
+                onPressed: isLoadingFollowStatus ? null : _toggleFollow,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'ติดตาม',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
-            SizedBox(height: 10),
-            Divider(color: Colors.grey[800]),
-            DefaultTabController(
-              length: 3,
-              child: Column(
-                children: [
-                  TabBar(
-                    indicatorColor: Colors.white,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.grey,
-                    tabs: [
-                      Tab(text: 'เธรด'),
-                      Tab(text: 'การตอบกลับ'),
-                      Tab(text: 'รีโพสต์'),
-                    ],
-                  ),
-                  Container(
-                    height: 400,
-                    child: TabBarView(
-                      children: [
-                        Center(child: Text('ไม่มีเธรด', style: TextStyle(color: Colors.grey))),
-                        Center(child: Text('ไม่มีการตอบกลับ', style: TextStyle(color: Colors.grey))),
-                        Center(child: Text('ไม่มีรีโพสต์', style: TextStyle(color: Colors.grey))),
-                      ],
-                    ),
-                  ),
-                ],
+          ),
+
+          SizedBox(height: 10),
+          Divider(color: Colors.grey[800]),
+          Expanded(
+            child: isPostLoading
+                ? Center(child: CircularProgressIndicator())
+                : userPosts.isEmpty
+                ? Center(
+              child: Text(
+                'ยังไม่มีโพสต์',
+                style: TextStyle(color: Colors.grey),
               ),
+            )
+                : ListView.builder(
+              itemCount: userPosts.length,
+              itemBuilder: (context, index) {
+                final post = userPosts[index];
+                return PostWidget(post: post);
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

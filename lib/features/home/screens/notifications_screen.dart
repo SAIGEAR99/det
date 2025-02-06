@@ -20,7 +20,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _fetchNotifications();
   }
 
-  // ดึงข้อมูลการแจ้งเตือนจาก API
   Future<void> _fetchNotifications() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final userId = authProvider.userId; // ดึง userId จาก AuthProvider
@@ -41,8 +40,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
+
         setState(() {
-          notifications = List<Map<String, dynamic>>.from(data);
+          notifications = data.map((item) {
+            return Map<String, dynamic>.from(item);
+          }).toList();
           isLoading = false;
         });
       } else {
@@ -86,16 +88,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         itemCount: notifications.length,
         itemBuilder: (context, index) {
           final notification = notifications[index];
+          final String type = notification['type'] ?? 'other';
+          final String senderUsername =
+              notification['sender']?['username'] ?? 'ไม่ทราบชื่อ';
+          final String message = _getMessage(notification);
+          final bool isFollowNotification = type == 'follow';
+
           return ListTile(
             leading: CircleAvatar(
               backgroundImage: NetworkImage(
-                '${dotenv.env['API_BASE_URL']}/det/img/profile/${notification['sender_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                  '${dotenv.env['API_BASE_URL']}/det/img/profile/${notification['sender_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}'
               ),
             ),
             title: Row(
               children: [
                 Text(
-                  '${notification['users_notifications_sender_idTousers']['username']} ',
+                  '$senderUsername ',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -103,7 +111,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
                 Expanded(
                   child: Text(
-                    notification['message'] ?? 'ไม่มีข้อความ',
+                    message,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: Colors.white),
                   ),
@@ -114,31 +122,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               _formatTime(notification['created_at']),
               style: TextStyle(color: Colors.grey),
             ),
-            trailing: SizedBox(
-              width: 90,
-              height: 35,
-              child: OutlinedButton(
-                onPressed: () {
-                  // กำหนดฟังก์ชันเพิ่มเติมเมื่อกดปุ่ม
-                },
-                child: Text(
-                  'ติดตามกลับ',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: Colors.white),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  minimumSize: Size(70, 35),
-                  padding:
-                  EdgeInsets.symmetric(horizontal: 10),
-                ),
-              ),
-            ),
           );
         },
       ),
@@ -146,6 +129,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
+  // ✅ กำหนดข้อความแจ้งเตือนให้เหมาะกับประเภทของแจ้งเตือน
+  String _getMessage(Map<String, dynamic> notification) {
+    switch (notification['type']) {
+      case 'follow':
+        return 'ติดตามคุณ';
+      case 'like':
+        return 'ถูกใจโพสต์ของคุณ';
+      case 'comment':
+        return 'แสดงความคิดเห็นในโพสต์ของคุณ';
+      default:
+        return notification['message'] ?? 'มีการแจ้งเตือนใหม่';
+    }
+  }
+
+
+
+  // ✅ แปลงเวลาจาก ISO ให้เป็นข้อความอ่านง่าย
   String _formatTime(String isoTime) {
     final DateTime time = DateTime.parse(isoTime);
     final Duration diff = DateTime.now().difference(time);

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:det/features/home/widgets/user_profile_screen.dart';
+import 'package:det/features/home/screens/profile_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
