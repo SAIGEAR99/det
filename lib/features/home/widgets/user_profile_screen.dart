@@ -277,7 +277,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   backgroundColor: Colors.transparent,
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.white, width: 1.5),
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -296,7 +296,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),

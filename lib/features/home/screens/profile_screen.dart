@@ -353,13 +353,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.history , color: Colors.white),
-                title: const Text('จัดเก็บ', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  // Handle "จัดเก็บ" action
-                },
-              ),
-              ListTile(
                 leading: const Icon(Icons.lock, color: Colors.white),
                 title: const Text('ความเป็นส่วนตัว', style: TextStyle(color: Colors.white)),
                 onTap: () {
