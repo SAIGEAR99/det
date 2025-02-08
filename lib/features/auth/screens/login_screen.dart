@@ -190,6 +190,23 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
+                          SizedBox(height: 10), // เพิ่มระยะห่าง
+
+// ปุ่มเข้าสู่แอปโดยไม่ต้องล็อกอิน
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pushReplacementNamed(context, '/home'); // ไปหน้า HomeScreen
+                            },
+                            child: Text(
+                              '[ เข้าสู่ระบบภายหลัง ]',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                decoration: TextDecoration.underline, // ขีดเส้นใต้ให้ดูเหมือนลิงก์
+                              ),
+                            ),
+                          ),
+
                         ],
                       ),
                     ),

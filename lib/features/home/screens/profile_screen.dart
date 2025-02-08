@@ -70,8 +70,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _logout(BuildContext context) {
-    Navigator.pushReplacementNamed(context, '/login');
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // เคลียร์ข้อมูลการเข้าสู่ระบบ
+    authProvider.logout();
+
+    // เปลี่ยนหน้าไปที่ LoginScreen และล้าง Stack หน้าทั้งหมด
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
+
 
   Future<void> _pickAndUploadImage() async {
     final ImagePicker _picker = ImagePicker();
@@ -512,7 +519,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
 
-  // เธรดแท็บ
   Widget _buildThreadTab() {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _fetchUserPosts(), // ดึงโพสต์ของผู้ใช้
@@ -535,12 +541,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         } else {
           final userPosts = snapshot.data!;
-          return ListView.builder(
-            itemCount: userPosts.length,
-            itemBuilder: (context, index) {
-              final post = userPosts[index];
-              return PostWidget(post: post); // ใช้ PostWidget แสดงโพสต์
-            },
+          return Padding(
+            padding: const EdgeInsets.only(top: 0), // เพิ่ม Padding ด้านบน 10
+            child: ListView.builder(
+              padding: EdgeInsets.only(top: 10), // เพิ่ม Padding ใน ListView ด้วย
+              itemCount: userPosts.length,
+              itemBuilder: (context, index) {
+                final post = userPosts[index];
+                return PostWidget(post: post); // ใช้ PostWidget แสดงโพสต์
+              },
+            ),
           );
         }
       },

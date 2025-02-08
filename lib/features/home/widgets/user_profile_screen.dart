@@ -9,6 +9,7 @@ import 'package:det/features/home/screens/home_content_screen.dart';
 class UserProfileScreen extends StatefulWidget {
   final Map<String, dynamic> user;
 
+
   const UserProfileScreen({Key? key, required this.user}) : super(key: key);
 
   @override
@@ -16,6 +17,7 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
+  bool isPageLoading = true;
   late String fullName;
   late String profileImg;
   late String bio;
@@ -32,6 +34,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   void initState() {
     super.initState();
+    Future.delayed(Duration(seconds: 1), () {
+      setState(() {
+        isPageLoading = false; // ปิดสถานะการโหลดหลังจาก 1 วินาที
+      });
+    });
+
     Future.microtask(() {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final String sessionUserId = authProvider.userId ?? '';
@@ -48,6 +56,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       _fetchUserPosts();
     });
   }
+
 
   Future<void> _checkFollowStatus(String sessionUserId) async {
     if (sessionUserId.isEmpty) return;
@@ -246,71 +255,109 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: SizedBox(
               width: double.infinity,
-              child: Provider.of<AuthProvider>(context, listen: false).userId == widget.user['user_id']
-                  ? OutlinedButton(
-                onPressed: () {
-                  // การแชร์โปรไฟล์
-                  print('แชร์โปรไฟล์ของฉัน');
+              child: Builder(
+                builder: (context) {
+                  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                  final String? currentUserId = authProvider.userId;
+                  final String profileUserId = widget.user['user_id'].toString(); // แปลง user_id ให้เป็น String
+
+                  // กรณียังไม่ได้เข้าสู่ระบบ
+                  if (currentUserId == null) {
+                    return ElevatedButton(
+                      onPressed: () {
+                        // ไปยังหน้า Login
+                        Navigator.pushNamed(context, '/login');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue, // สีพื้นหลังของปุ่ม
+                        foregroundColor: Colors.white, // สีข้อความ
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        'กรุณาเข้าสู่ระบบเพื่อใช้ฟีเจอร์นี้',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    );
+                  }
+
+                  // กรณีดูโปรไฟล์ตัวเอง
+                  if (currentUserId == profileUserId) {
+                    return OutlinedButton(
+                      onPressed: () {
+                        // การแชร์โปรไฟล์
+                        print('แชร์โปรไฟล์ของฉัน');
+                      },
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        side: BorderSide(color: Colors.white, width: 1.5), // ขอบสีขาว
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        'แชร์โปรไฟล์',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    );
+                  }
+
+                  // กรณีดูโปรไฟล์คนอื่น
+                  return isFollowing
+                      ? OutlinedButton(
+                    onPressed: isLoadingFollowStatus ? null : _toggleFollow,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      side: BorderSide(color: Colors.white, width: 1.5),
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      'กำลังติดตาม',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                  )
+                      : ElevatedButton(
+                    onPressed: isLoadingFollowStatus ? null : _toggleFollow,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      'ติดตาม',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  );
                 },
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  side: BorderSide(color: Colors.white, width: 1.5), // ขอบสีขาว
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  'แชร์โปรไฟล์',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
-                ),
-              )
-                  : isFollowing
-                  ? OutlinedButton(
-                onPressed: isLoadingFollowStatus ? null : _toggleFollow,
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  side: BorderSide(color: Colors.white, width: 1.5),
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  'กำลังติดตาม',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
-                ),
-              )
-                  : ElevatedButton(
-                onPressed: isLoadingFollowStatus ? null : _toggleFollow,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  'ติดตาม',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
               ),
             ),
           ),
+
 
           SizedBox(height: 10),
           Divider(color: Colors.grey[800]),

@@ -9,6 +9,7 @@ class AuthProvider with ChangeNotifier {
   // สร้าง getter สำหรับดึง user_id และ username
   String? get userId => _user?['id']?.toString();  // แปลง 'id' จาก int เป็น String
   String? get email => _user?['email']; // ใช้ 'email' จาก _user แทน
+  String? get username => _user?['username'];
   bool get isLoading => _isLoading;
 
   Future<void> loadUser() async {
@@ -18,8 +19,8 @@ class AuthProvider with ChangeNotifier {
     try {
       final decodedToken = await _authService.decodeToken();
       if (decodedToken != null) {
-        _user = decodedToken; // เก็บข้อมูลจาก decodedToken
-        print('User loaded: $_user'); // Debug: ดูค่าที่โหลดได้
+        _user = decodedToken;
+        print('User loaded: $_user'); // ✅ ตรวจสอบว่า JWT มี `username` หรือไม่
       } else {
         print('No user found in JWT');
       }
@@ -30,6 +31,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
 
   Future<void> reloadUser() async {
     try {

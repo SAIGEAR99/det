@@ -9,7 +9,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 Future<void> main() async {
 
   try {
-    await dotenv.load(fileName: ".env");
+    await dotenv.load(fileName: "assets/.env");
     print('Environment variables loaded successfully.');
 
     print("Loaded API_BASE_URL: ${dotenv.env['API_BASE_URL']}");
