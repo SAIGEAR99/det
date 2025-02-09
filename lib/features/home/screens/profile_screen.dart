@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:det/features/auth/providers/auth_provider.dart';
 import 'package:det/services/user.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:det/features/home/screens/home_content_screen.dart';
@@ -18,7 +17,8 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final UserService _userService = UserService();
+
+  late UserService _userService;
   String userId = 'Loading...';
   String username = 'Loading...';
   String email = 'Loading...';
@@ -32,28 +32,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     Future.microtask(() {
-      // เรียกใช้ AuthProvider เพื่อโหลดข้อมูล User
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      _userService = UserService(authProvider.apiBaseUrl); // กำหนด API URL ให้ UserService
       authProvider.loadUser().then((_) {
         _getUserData(); // โหลดข้อมูลเพิ่มเติมเมื่อ provider พร้อม
       });
     });
   }
 
-  // ฟังก์ชันเรียกข้อมูลจาก API
+
   void _getUserData() async {
     final response = await _userService.getUserData(context);
-    print('Response from API: $response');
+    if (!mounted) return; // ป้องกันการอัปเดต State ถ้า Widget ถูกทำลาย
 
     if (response != null) {
       setState(() {
         userId = response['user_id']?.toString() ?? '';
-        username = response['username'] ?? 'No username';
-        email = response['email'] ?? 'No email';
-        fullName = response['full_name'] ?? 'No full name';
-        bio = response['bio'] ?? 'No bio';
-        createdAt = response['created_at'] ?? 'No created at';
-        link = response['link'] ?? 'No link';
+        username = response['username'] ?? 'ไม่ระบุชื่อผู้ใช้';
+        email = response['email'] ?? 'ไม่ระบุอีเมล';
+        fullName = response['full_name'] ?? 'ไม่ระบุชื่อเต็ม';
+        bio = response['bio'] ?? 'ไม่มีข้อมูล';
+        createdAt = response['created_at'] ?? 'ไม่ระบุวันที่';
+        link = response['link'] ?? '';
+        isLoading = false; // หยุดสถานะ Loading
       });
     } else {
       print('Failed to fetch user data.');
@@ -65,9 +66,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         bio = 'Error';
         createdAt = 'Error';
         link = 'Error';
+        isLoading = false;
       });
     }
   }
+
 
   void _logout(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -86,27 +89,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (image != null) {
       print('Selected image path: ${image.path}');
-      print('User ID: $userId'); // Ensure this prints a valid userId
+      print('User ID: $userId');
 
-      final response = await _userService.uploadProfilePicture(
-        userId, // Ensure this is not null
-        image.path,
-      );
+      final response = await _userService.uploadProfilePicture(userId, image.path);
+
+      if (!mounted) return; // ป้องกัน State Update ถ้า Widget ถูกทำลาย
 
       if (response != null) {
         setState(() {
-          print('Profile picture updated successfully: ${response['user']}');
+          print('✅ Profile picture updated successfully');
         });
       } else {
-        print('Failed to upload profile picture');
+        print('❌ Failed to upload profile picture');
       }
     } else {
-      print('No image selected');
+      print('⚠ No image selected');
     }
   }
-
-
-
 
   void _showEditProfileBottomSheet(BuildContext context) {
 
@@ -114,6 +113,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final TextEditingController _fullNameController = TextEditingController(text: fullName);
     final TextEditingController _bioController = TextEditingController(text: bio);
     final TextEditingController _linkController = TextEditingController(text: link);
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     showModalBottomSheet(
       context: context,
@@ -189,7 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         CircleAvatar(
                           radius: 50,
                       backgroundImage: NetworkImage(
-                        '${dotenv.env['API_BASE_URL']}/det/img/profile/$userId?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                        '${authProvider.apiBaseUrl}/det/img/profile/$userId?timestamp=${DateTime.now().millisecondsSinceEpoch}',
                       ),
                     ),
                         SizedBox(height: 10),
@@ -283,6 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final authProvider = Provider.of<AuthProvider>(context);
 
+
     // รอให้ userId ถูกโหลดจาก AuthProvider
     if (authProvider.userId == null) {
       return Scaffold(
@@ -334,7 +336,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     CircleAvatar(
                       radius: 40,
                       backgroundImage: NetworkImage(
-                        '${dotenv.env['API_BASE_URL']}/det/img/profile/$userId?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                        '${authProvider.apiBaseUrl}/det/img/profile/$userId?timestamp=${DateTime.now().millisecondsSinceEpoch}',
                       ),
                     ),
                     SizedBox(height: 10),
@@ -388,7 +390,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       CircleAvatar(
                         radius: 50,
                     backgroundImage: NetworkImage(
-                      '${dotenv.env['API_BASE_URL']}/det/img/profile/$userId?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                      '${authProvider.apiBaseUrl}/det/img/profile/$userId?timestamp=${DateTime.now().millisecondsSinceEpoch}',
                     ),
                       ),
 
@@ -496,7 +498,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<List<Map<String, dynamic>>> _fetchUserPosts() async {
-    final String apiUrl = '${dotenv.env['API_BASE_URL']}/det/post/getAllPosts?user_id=$userId';
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final String apiUrl = '${authProvider.apiBaseUrl}/det/post/getAllPosts?user_id=$userId';
 
     try {
       final response = await http.get(Uri.parse(apiUrl));

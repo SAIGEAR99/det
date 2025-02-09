@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:det/services/auth_service.dart';
 
 class AuthProvider with ChangeNotifier {
-  final AuthService _authService = AuthService();
+  final AuthService _authService;
+  final String apiBaseUrl;
   Map<String, dynamic>? _user;
   bool _isLoading = true;
 
-  // สร้าง getter สำหรับดึง user_id และ username
-  String? get userId => _user?['id']?.toString();  // แปลง 'id' จาก int เป็น String
-  String? get email => _user?['email']; // ใช้ 'email' จาก _user แทน
+  AuthProvider(this.apiBaseUrl) : _authService = AuthService(apiBaseUrl);
+  String? get userId => _user?['id']?.toString();
+  String? get email => _user?['email'];
   String? get username => _user?['username'];
   bool get isLoading => _isLoading;
 
@@ -20,7 +21,7 @@ class AuthProvider with ChangeNotifier {
       final decodedToken = await _authService.decodeToken();
       if (decodedToken != null) {
         _user = decodedToken;
-        print('User loaded: $_user'); // ✅ ตรวจสอบว่า JWT มี `username` หรือไม่
+        print('User loaded: $_user');
       } else {
         print('No user found in JWT');
       }
@@ -32,12 +33,11 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-
   Future<void> reloadUser() async {
     try {
       final decodedToken = await _authService.decodeToken();
       if (decodedToken != null) {
-        _user = decodedToken; // อัปเดตข้อมูลผู้ใช้ใหม่
+        _user = decodedToken;
         print('User reloaded: $_user');
       } else {
         print('No user data available');
@@ -45,7 +45,7 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       print('Error reloading user: $e');
     } finally {
-      notifyListeners(); // แจ้งให้ UI อัปเดตข้อมูล
+      notifyListeners();
     }
   }
 

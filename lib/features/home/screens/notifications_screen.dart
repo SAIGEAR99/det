@@ -33,7 +33,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     final String apiUrl =
-        '${dotenv.env['API_BASE_URL']}/det/notifications?user_id=$userId';
+        '${authProvider.apiBaseUrl}/det/notifications?user_id=$userId';
 
     try {
       final response = await http.get(Uri.parse(apiUrl));
@@ -93,11 +93,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               notification['sender']?['username'] ?? 'ไม่ทราบชื่อ';
           final String message = _getMessage(notification);
           final bool isFollowNotification = type == 'follow';
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
           return ListTile(
+
             leading: CircleAvatar(
               backgroundImage: NetworkImage(
-                  '${dotenv.env['API_BASE_URL']}/det/img/profile/${notification['sender_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}'
+                  '${authProvider.apiBaseUrl}/det/img/profile/${notification['sender_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}'
               ),
             ),
             title: Row(

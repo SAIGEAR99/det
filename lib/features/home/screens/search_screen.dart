@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:det/features/home/widgets/user_profile_screen.dart';
-import 'package:det/features/home/screens/profile_screen.dart';
+import 'package:det/features/auth/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
+
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -22,8 +23,8 @@ class _SearchScreenState extends State<SearchScreen> {
       });
       return;
     }
-
-    final String apiUrl = '${dotenv.env['API_BASE_URL']}/det/search?query=$query';
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final String apiUrl = '${authProvider.apiBaseUrl}/det/search?query=$query';
 
     setState(() {
       isLoading = true;

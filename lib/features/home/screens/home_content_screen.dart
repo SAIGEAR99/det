@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:det/features/auth/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:det/features/home/widgets/user_profile_screen.dart';
@@ -37,8 +36,9 @@ class _HomeContentScreenState extends State<HomeContentScreen> {
     final userId = authProvider.userId;
 
     final String apiUrl = userId != null
-        ? '${dotenv.env['API_BASE_URL']}/det/post/getAllPosts?user_id=$userId'
-        : '${dotenv.env['API_BASE_URL']}/det/post/getAllPosts';
+        ? '${authProvider.apiBaseUrl}/det/post/getAllPosts?user_id=$userId'
+        : '${authProvider.apiBaseUrl}/det/post/getAllPosts';
+
 
     try {
       final response = await http.get(Uri.parse(apiUrl));
@@ -222,8 +222,11 @@ class _PostWidgetState extends State<PostWidget> {
     }
 
     try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final String apiUrl = '${authProvider.apiBaseUrl}/det/comment';
+
       final response = await http.post(
-        Uri.parse('${dotenv.env['API_BASE_URL']}/det/comment'),
+        Uri.parse(apiUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'post_id': postId,
@@ -231,6 +234,7 @@ class _PostWidgetState extends State<PostWidget> {
           'content': content,
         }),
       );
+
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         _commentController.clear();
@@ -260,7 +264,8 @@ class _PostWidgetState extends State<PostWidget> {
 
 
   Future<List<Map<String, dynamic>>> _fetchComments(String postId) async {
-    final url = '${dotenv.env['API_BASE_URL']}/det/comment/fetch?post_id=$postId';
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final url = '${authProvider.apiBaseUrl}/det/comment/fetch?post_id=$postId';
     try {
       final response = await http.get(Uri.parse(url));
 
@@ -341,10 +346,11 @@ class _PostWidgetState extends State<PostWidget> {
               itemCount: comments.length,
               itemBuilder: (context, index) {
                 final comment = comments[index];
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundImage: NetworkImage(
-                      '${dotenv.env['API_BASE_URL']}/det/img/profile/${comment['user_id'] ?? 'default'}',
+                      '${authProvider.apiBaseUrl}/det/img/profile/${comment['user_id'] ?? 'default'}',
                     ),
                   ),
                   title: Text(
@@ -408,7 +414,7 @@ class _PostWidgetState extends State<PostWidget> {
       return;
     }
 
-    final String apiUrl = '${dotenv.env['API_BASE_URL']}/det/post/like';
+    final String apiUrl = '${authProvider.apiBaseUrl}/det/post/like';
     final isLikeAction = !isLiked; // Determine the new like state
 
     try {
@@ -478,7 +484,7 @@ class _PostWidgetState extends State<PostWidget> {
                           user: {
                             'user_id': widget.post['user_id'],
                             'username': widget.post['username'],
-                            'profile_img': '${dotenv.env['API_BASE_URL']}/det/img/profile/${widget.post['user_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                            'profile_img': '${authProvider.apiBaseUrl}/det/img/profile/${widget.post['user_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}',
                             'bio': widget.post['bio'] ?? '',
                             'followers': widget.post['followers'] ?? 0,
                           },
@@ -488,7 +494,7 @@ class _PostWidgetState extends State<PostWidget> {
                   },
                   child: CircleAvatar(
                     backgroundImage: NetworkImage(
-                      '${dotenv.env['API_BASE_URL']}/det/img/profile/${widget.post['user_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                      '${authProvider.apiBaseUrl}/det/img/profile/${widget.post['user_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}',
                     ),
                     radius: 20,
                   ),
@@ -667,7 +673,8 @@ class _PostWidgetState extends State<PostWidget> {
   }
 
   void _deletePost(BuildContext context, String postId) async {
-    final String apiUrl = '${dotenv.env['API_BASE_URL']}/det/post/delete';
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final String apiUrl = '${authProvider.apiBaseUrl}/det/post/delete';
     try {
       final response = await http.post(
         Uri.parse(apiUrl),

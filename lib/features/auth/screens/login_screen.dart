@@ -12,7 +12,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
 
   bool _isLoading = false;
 
@@ -23,7 +22,10 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       try {
-        final result = await _authService.login(
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final authService = AuthService(authProvider.apiBaseUrl); // รับ API URL จาก AuthProvider
+
+        final result = await authService.login(
           _emailController.text,
           _passwordController.text,
         );
@@ -32,8 +34,6 @@ class _LoginScreenState extends State<LoginScreen> {
           SnackBar(content: Text('Login Successful!')),
         );
 
-        // โหลดข้อมูลผู้ใช้ใหม่ผ่าน AuthProvider
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
         await authProvider.loadUser();
 
         Navigator.pushReplacementNamed(context, '/home');
@@ -49,13 +49,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // พื้นหลังสีดำ
           Container(
             color: Colors.black,
           ),
@@ -64,7 +62,6 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // โลโก้หรือชื่อแอป
                   Text(
                     '@ Det',
                     style: TextStyle(
@@ -75,14 +72,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   SizedBox(height: 40),
 
-                  // ฟอร์มล็อกอิน
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         children: [
-                          // ช่องกรอกอีเมล
                           TextFormField(
                             controller: _emailController,
                             style: TextStyle(color: Colors.white),
@@ -106,7 +101,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           SizedBox(height: 15),
 
-                          // ช่องกรอกรหัสผ่าน
                           TextFormField(
                             controller: _passwordController,
                             obscureText: true,
@@ -131,7 +125,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           SizedBox(height: 35),
 
-                          // ปุ่มล็อกอิน
                           _isLoading
                               ? CircularProgressIndicator(color: Colors.white)
                               : ElevatedButton(
@@ -140,27 +133,23 @@ class _LoginScreenState extends State<LoginScreen> {
                               'เข้าสู่ระบบ',
                               style: TextStyle(
                                 fontSize: 18,
-                                color: Colors.black, // กำหนดตัวหนังสือเป็นสีดำ
+                                color: Colors.black,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white, // พื้นหลังของปุ่มเป็นสีขาว
-                              padding: EdgeInsets.symmetric(vertical: 16), // เพิ่ม Padding
+                              backgroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10), // มุมโค้งมน
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              minimumSize: Size(double.infinity, 50), // ปรับปุ่มให้เต็มความกว้าง
+                              minimumSize: Size(double.infinity, 50),
                             ),
-                          )
-                          ,
+                          ),
                           SizedBox(height: 20),
 
-                          // ลิงก์ลืมรหัสผ่าน
                           GestureDetector(
-                            onTap: () {
-                              // ลิงก์ไปหน้าลืมรหัสผ่าน
-                            },
+                            onTap: () {},
                             child: Text(
                               'ลืมรหัสผ่านใช่ไหม',
                               style: TextStyle(color: Colors.white70),
@@ -168,7 +157,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           SizedBox(height: 80),
 
-                          // สมัครสมาชิก
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -190,23 +178,21 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
-                          SizedBox(height: 10), // เพิ่มระยะห่าง
+                          SizedBox(height: 10),
 
-// ปุ่มเข้าสู่แอปโดยไม่ต้องล็อกอิน
                           GestureDetector(
                             onTap: () {
-                              Navigator.pushReplacementNamed(context, '/home'); // ไปหน้า HomeScreen
+                              Navigator.pushReplacementNamed(context, '/home');
                             },
                             child: Text(
                               '[ เข้าสู่ระบบภายหลัง ]',
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
-                                decoration: TextDecoration.underline, // ขีดเส้นใต้ให้ดูเหมือนลิงก์
+                                decoration: TextDecoration.underline,
                               ),
                             ),
                           ),
-
                         ],
                       ),
                     ),

@@ -277,7 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onPressed: () async {
                           if (_postController.text.isNotEmpty ||
                               _selectedImages.isNotEmpty) {
-                            await PostService().createPost(
+                            await PostService(authProvider.apiBaseUrl).createPost(
                               userId: authProvider.userId ?? '',
                               text: _postController.text,
                               images: _selectedImages,

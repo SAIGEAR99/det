@@ -60,8 +60,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _checkFollowStatus(String sessionUserId) async {
     if (sessionUserId.isEmpty) return;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final String apiUrl =
-        '${dotenv.env['API_BASE_URL']}/det/follow/status?follower_id=$sessionUserId&following_id=${widget.user['user_id']}';
+        '${authProvider.apiBaseUrl}/det/follow/status?follower_id=$sessionUserId&following_id=${widget.user['user_id']}';
 
     try {
       final response = await http.get(Uri.parse(apiUrl));
@@ -98,7 +99,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final String sessionUserId = authProvider.userId ?? '';
     if (sessionUserId.isEmpty) return;
 
-    final String apiUrl = '${dotenv.env['API_BASE_URL']}/det/follow/toggle';
+    final String apiUrl = '${authProvider.apiBaseUrl}/det/follow/toggle';
 
     try {
       final response = await http.post(
@@ -128,7 +129,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final String sessionUserId = authProvider.userId ?? '';
 
     final String apiUrl =
-        '${dotenv.env['API_BASE_URL']}/det/user/fetch?user_id=${widget.user['user_id']}';
+        '${authProvider.apiBaseUrl}/det/user/fetch?user_id=${widget.user['user_id']}';
 
     try {
       final response = await http.get(Uri.parse(apiUrl));
@@ -161,8 +162,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _fetchUserPosts() async {
     final String userId = widget.user['user_id'].toString();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final String apiUrl =
-        '${dotenv.env['API_BASE_URL']}/det/post/getAllPosts';
+        '${authProvider.apiBaseUrl}/det/post/getAllPosts';
 
     try {
       final response = await http.get(Uri.parse(apiUrl));
@@ -191,6 +193,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -215,7 +218,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   radius: 50,
                   backgroundImage: profileImg.isNotEmpty
                       ? NetworkImage(
-                    '${dotenv.env['API_BASE_URL']}/det/img/profile/${widget.user['user_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}',
+                    '${authProvider.apiBaseUrl}/det/img/profile/${widget.user['user_id']}?timestamp=${DateTime.now().millisecondsSinceEpoch}',
                   )
                       : null,
                   onBackgroundImageError: (_, __) {

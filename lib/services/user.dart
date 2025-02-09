@@ -4,12 +4,14 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:det/features/auth/providers/auth_provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 
 class UserService {
+  final String apiBaseUrl;
   final _storage = FlutterSecureStorage();
   static const String _tokenKey = 'jwt_token';
-  final String baseUrl = '${dotenv.env['API_BASE_URL']}/det';
+
+  UserService(this.apiBaseUrl); // รับ API URL จาก AuthProvider
 
   // ฟังก์ชันดึงข้อมูลจาก /user โดยใช้ user_id จาก AuthProvider
   Future<Map<String, dynamic>?> getUserData(BuildContext context) async {
@@ -17,7 +19,7 @@ class UserService {
     final userId = authProvider.userId;
 
     if (userId == null) {
-      print('User ID not found in AuthProvider');
+      print('❌ User ID not found in AuthProvider');
       return null;
     }
 
@@ -26,7 +28,7 @@ class UserService {
 
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/user'),
+        Uri.parse('$apiBaseUrl/det/user'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -35,13 +37,13 @@ class UserService {
       );
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);  // ถ้าเรียก API สำเร็จ
+        return jsonDecode(response.body);
       } else {
-        print('Access denied: ${response.body}');
+        print('❌ Access denied: ${response.body}');
         return null;
       }
     } catch (e) {
-      print('Error accessing protected route: $e');
+      print('❌ Error accessing protected route: $e');
       return null;
     }
   }
@@ -52,7 +54,7 @@ class UserService {
     final userId = authProvider.userId;
 
     if (userId == null) {
-      print('User ID not found in AuthProvider');
+      print('❌ User ID not found in AuthProvider');
       return null;
     }
 
@@ -61,7 +63,7 @@ class UserService {
 
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/user/edit_profile'),
+        Uri.parse('$apiBaseUrl/det/user/edit_profile'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -75,57 +77,52 @@ class UserService {
       );
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);  // ถ้าแก้ไขโปรไฟล์สำเร็จ
+        return jsonDecode(response.body);
       } else {
-        print('Failed to update profile: ${response.body}');
+        print('❌ Failed to update profile: ${response.body}');
         return null;
       }
     } catch (e) {
-      print('Error updating profile: $e');
+      print('❌ Error updating profile: $e');
       return null;
     }
   }
 
+  // ฟังก์ชันอัปโหลดรูปโปรไฟล์
   Future<Map<String, dynamic>?> uploadProfilePicture(String userId, String filePath) async {
     try {
-      final token = await getToken(); // Get the token for authorization
+      final token = await getToken();
       if (token == null) {
-        print('Error: Token not found.');
+        print('❌ Error: Token not found.');
         return null;
       }
 
-      // Prepare multipart request
-      final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/img/upload_profile'));
-      request.headers['Authorization'] = 'Bearer $token'; // Authorization header
-      request.fields['user_id'] = userId; // Add user_id field
-      request.files.add(await http.MultipartFile.fromPath('image', filePath)); // Add image file
+      final request = http.MultipartRequest('POST', Uri.parse('$apiBaseUrl/det/img/upload_profile'));
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['user_id'] = userId;
+      request.files.add(await http.MultipartFile.fromPath('image', filePath));
 
-      print('Request Fields: ${request.fields}');
-      print('Request Files: ${request.files}');
+      print('📤 Uploading profile picture for user $userId');
 
-      // Send the request
       final response = await request.send();
-
-      // Process response
       if (response.statusCode == 200) {
         final responseBody = await response.stream.bytesToString();
-        print('Profile picture uploaded successfully.');
-        return jsonDecode(responseBody); // Parse JSON response
+        print('✅ Profile picture uploaded successfully.');
+        return jsonDecode(responseBody);
       } else {
-        print('Error uploading profile picture: ${response.statusCode} - ${response.reasonPhrase}');
+        print('❌ Error uploading profile picture: ${response.statusCode} - ${response.reasonPhrase}');
         final errorBody = await response.stream.bytesToString();
-        print('Response body: $errorBody');
+        print('❌ Response body: $errorBody');
         return null;
       }
     } catch (e) {
-      print('Exception occurred while uploading profile picture: $e');
+      print('❌ Exception occurred while uploading profile picture: $e');
       return null;
     }
   }
-
 
   // ฟังก์ชันดึง JWT จาก Secure Storage
   Future<String?> getToken() async {
-    return await _storage.read(key: _tokenKey);  // อ่าน JWT จาก Secure Storage
+    return await _storage.read(key: _tokenKey);
   }
 }

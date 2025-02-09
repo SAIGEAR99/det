@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
+import 'package:det/features/auth/providers/auth_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -18,9 +19,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _register() async {
     if (_formKey.currentState!.validate()) {
+      // ดึง apiBaseUrl จาก AuthProvider
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final apiBaseUrl = authProvider.apiBaseUrl;
+
+      if (apiBaseUrl == null || apiBaseUrl.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('⚠ ไม่พบ URL ของ API')),
+        );
+        return;
+      }
+
       try {
         final response = await http.post(
-          Uri.parse('${dotenv.env['API_BASE_URL']}/det/register'),
+          Uri.parse('$apiBaseUrl/det/register'),
           body: jsonEncode({
             'username': username,
             'name': name,
