@@ -59,9 +59,6 @@ class _HomeContentScreenState extends State<HomeContentScreen> {
     }
   }
 
-
-
-
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
@@ -448,6 +445,66 @@ class _PostWidgetState extends State<PostWidget> {
     }
   }
 
+  Future<void> _toggleRepost(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.userId;
+
+    if (userId == null) {
+      _showLoginDialog(context);
+      return;
+    }
+
+    final String apiUrl = '${authProvider.apiBaseUrl}/det/repost';
+
+    // **อัปเดตค่า repostCount และ isReposted ทันที**
+    setState(() {
+      widget.post['isReposted'] = !(widget.post['isReposted'] ?? false); // Toggle state
+      widget.post['repostCount'] = widget.post['isReposted']
+          ? (widget.post['repostCount'] ?? 0) + 1
+          : (widget.post['repostCount'] ?? 0) - 1;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        body: jsonEncode({
+          'user_id': userId,
+          'post_id': widget.post['post_id'],
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      print('Response Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+
+        setState(() {
+          widget.post['repostCount'] = responseData['repostCount'];
+          widget.post['isReposted'] = responseData['reposted'];
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(responseData['reposted'] ? 'รีโพสต์สำเร็จ' : 'ยกเลิกรีโพสต์สำเร็จ')),
+        );
+      } else {
+        print('Failed to repost: ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ไม่สามารถรีโพสต์ได้')),
+        );
+      }
+    } catch (e) {
+      print('Error reposting: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาดในการรีโพสต์')),
+      );
+    }
+  }
+
+
+
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -593,16 +650,17 @@ class _PostWidgetState extends State<PostWidget> {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                // ปุ่มกดไลค์
                 Row(
                   children: [
-            GestureDetector(
-            onTap: () => _toggleLike(context),
-          child: Icon(
-            isLiked ? Icons.favorite : Icons.favorite_border,
-            color: isLiked ? Colors.red : Colors.grey,
-            size: 20,
-          ),
-            ),
+                    GestureDetector(
+                      onTap: () => _toggleLike(context),
+                      child: Icon(
+                        isLiked ? Icons.favorite : Icons.favorite_border,
+                        color: isLiked ? Colors.red : Colors.grey,
+                        size: 20,
+                      ),
+                    ),
                     SizedBox(width: 4),
                     Text(
                       '$likeCount',
@@ -611,59 +669,52 @@ class _PostWidgetState extends State<PostWidget> {
                   ],
                 ),
                 SizedBox(width: 16),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        _showCommentsBottomSheet(context); // เรียกฟังก์ชันเปิดช่องคอมเมนต์
-                      },
-                      child: Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              _showCommentsBottomSheet(context); // เปิด Bottom Sheet แสดงความคิดเห็น
-                            },
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.chat_bubble_outline,
-                                  color: Colors.grey,
-                                  size: 20,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  '$commentCount', // ใช้ commentCount แทนค่า 0
-                                  style: TextStyle(color: Colors.grey, fontSize: 14),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+
+                // ปุ่มกดคอมเมนต์
+                GestureDetector(
+                  onTap: () {
+                    _showCommentsBottomSheet(context);
+                  },
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.chat_bubble_outline,
+                        color: Colors.grey,
+                        size: 20,
                       ),
-
-
-                    ),
-
-                  ],
+                      SizedBox(width: 4),
+                      Text(
+                        '$commentCount',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                    ],
+                  ),
                 ),
                 SizedBox(width: 16),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.autorenew,
-                      color: Colors.grey,
-                      size: 20,
-                    ),
-                    SizedBox(width: 4),
-                    Text(
-                      '0',
-                      style: TextStyle(color: Colors.grey, fontSize: 14),
-                    ),
-                  ],
+
+                // ปุ่มกดรีโพสต์
+                GestureDetector(
+                  onTap: () => _toggleRepost(context), // เรียกฟังก์ชันรีโพสต์
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.autorenew,
+                        color: widget.post['isReposted'] == true ? Colors.green : Colors.grey, // เปลี่ยนสีถ้ารีแล้ว
+                        size: 20,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        '${widget.post['repostCount'] ?? 0}',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                    ],
+                  ),
                 ),
+
               ],
             ),
           ),
+
 
 
           Divider(color: Colors.grey[800]),

@@ -11,6 +11,7 @@ import 'package:det/features/auth/screens/register_screen.dart';
 // URL สำหรับ Config API
 const String apiConfigUrl =
     "https://gist.github.com/SAIGEAR99/0487615042d0a65cc26579f46c45922a/raw/config.json";
+const URL_SEC2 = "https://f059-159-192-21-209.ngrok-free.app";
 
 // MyHttpOverrides: ข้ามการตรวจสอบ SSL Certificate
 class MyHttpOverrides extends HttpOverrides {
@@ -59,15 +60,15 @@ Future<String> fetchApiBaseUrl() async {
         return apiBaseUrl;
       } else {
         print('API_URL missing in JSON response');
-        return 'https://det-84171c8c1678.herokuapp.com';
+        return URL_SEC2;
       }
     } else {
       print('Failed to load API config. Status Code: ${response.statusCode}');
-      return 'https://det-84171c8c1678.herokuapp.com';
+      return URL_SEC2;
     }
   } catch (e) {
     print('Error fetching API config: $e');
-    return 'https://det-84171c8c1678.herokuapp.com';
+    return URL_SEC2;
   }
 }
 
