@@ -27,6 +27,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String createdAt = 'Loading...';
   String link = 'Loading...';
   bool isLoading = true;
+  int followersCount = 0;
+
 
   @override
   void initState() {
@@ -54,7 +56,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         bio = response['bio'] ?? 'ไม่มีข้อมูล';
         createdAt = response['created_at'] ?? 'ไม่ระบุวันที่';
         link = response['link'] ?? '';
-        isLoading = false; // หยุดสถานะ Loading
+        followersCount = response['followers_count'] ?? 0;
+        isLoading = false;
       });
     } else {
       print('Failed to fetch user data.');
@@ -66,6 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         bio = 'Error';
         createdAt = 'Error';
         link = 'Error';
+        followersCount = 0;
         isLoading = false;
       });
     }
@@ -414,9 +418,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             SizedBox(height: 5),
                             Text(
-                              'ผู้ติดตาม 135 คน '+ link,
+                              'ผู้ติดตาม $followersCount คน ' + (link.isNotEmpty ? link : ''),
                               style: TextStyle(color: Colors.grey),
                             ),
+
                           ],
                         ),
                       ),
@@ -521,6 +526,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<List<Map<String, dynamic>>> _fetchUserReposts() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final String apiUrl = '${authProvider.apiBaseUrl}/det/post/getAllPosts/repost?user_id=$userId';
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+
+        // ✅ กรองเฉพาะโพสต์ที่ผู้ใช้รีโพสต์
+        return data
+            .where((post) => post['isReposted'] == true)
+            .toList()
+            .cast<Map<String, dynamic>>();
+      } else {
+        print('❌ Failed to load user reposts: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('❌ Error fetching user reposts: $e');
+      return [];
+    }
+  }
+
 
   Widget _buildThreadTab() {
     return FutureBuilder<List<Map<String, dynamic>>>(
@@ -576,14 +605,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // รีโพสต์แท็บ
   Widget _buildRepostTab() {
-    return Container(
-      color: Colors.black,
-      child: Center(
-        child: Text(
-          'ยังไม่มีรีโพสต์',
-          style: TextStyle(color: Colors.white70),
-        ),
-      ),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _fetchUserReposts(), // ดึงโพสต์ที่รีโพสต์
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'เกิดข้อผิดพลาดในการโหลดรีโพสต์',
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Text(
+              'ยังไม่มีรีโพสต์',
+              style: TextStyle(color: Colors.white70),
+            ),
+          );
+        } else {
+          final userReposts = snapshot.data!;
+          return Padding(
+            padding: const EdgeInsets.only(top: 0),
+            child: ListView.builder(
+              padding: EdgeInsets.only(top: 10),
+              itemCount: userReposts.length,
+              itemBuilder: (context, index) {
+                final post = userReposts[index];
+                return PostWidget(post: post); // ใช้ PostWidget แสดงโพสต์ที่รีโพสต์
+              },
+            ),
+          );
+        }
+      },
     );
   }
 }

@@ -5,7 +5,6 @@ import 'package:det/features/home/widgets/user_profile_screen.dart';
 import 'package:det/features/auth/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 
-
 class SearchScreen extends StatefulWidget {
   @override
   _SearchScreenState createState() => _SearchScreenState();
@@ -23,8 +22,9 @@ class _SearchScreenState extends State<SearchScreen> {
       });
       return;
     }
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final String apiUrl = '${authProvider.apiBaseUrl}/det/search?query=$query';
+    final String apiUrl = '${authProvider.apiBaseUrl}/det/search?query=$query&user_id=${authProvider.userId}';
 
     setState(() {
       isLoading = true;
@@ -35,9 +35,17 @@ class _SearchScreenState extends State<SearchScreen> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
+
         setState(() {
-          searchResults = List<Map<String, dynamic>>.from(data);
+          searchResults = data.map((item) {
+            return {
+              ...Map<String, dynamic>.from(item),
+              'is_following': item['is_following'] ?? false,
+            };
+          }).toList();
         });
+
+        print("Search results: $searchResults"); // Debug log
       } else {
         print('Error fetching search results: ${response.statusCode}');
       }
@@ -49,6 +57,46 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     }
   }
+
+
+
+  Future<void> _toggleFollow(int targetUserId, bool isFollowing) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final String apiUrl = '${authProvider.apiBaseUrl}/det/follow/toggle';
+
+    final requestPayload = jsonEncode({
+      'follower_id': authProvider.userId,
+      'following_id': targetUserId,
+    });
+
+    print('🔍 Sending request: $requestPayload');
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        body: requestPayload,
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        setState(() {
+          for (var user in searchResults) {
+            if (user['user_id'] == targetUserId) {
+              user['is_following'] = responseData['is_following']; // ✅ อัปเดตค่าตาม API
+            }
+          }
+        });
+
+        print('Toggle follow success: ${responseData['message']}');
+      } else {
+        print('Failed to toggle follow: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error toggling follow: $e');
+    }
+  }
+
 
   void _navigateToUserProfile(Map<String, dynamic> user) {
     Navigator.push(
@@ -110,6 +158,8 @@ class _SearchScreenState extends State<SearchScreen> {
               itemCount: searchResults.length,
               itemBuilder: (context, index) {
                 final user = searchResults[index];
+                final bool isFollowing = user['is_following'] ?? false;
+
                 return ListTile(
                   onTap: () => _navigateToUserProfile(user),
                   leading: CircleAvatar(
@@ -129,21 +179,34 @@ class _SearchScreenState extends State<SearchScreen> {
                     '${user['bio']}\nผู้ติดตาม ${user['followers']} คน',
                     style: TextStyle(color: Colors.grey),
                   ),
-                  trailing: OutlinedButton(
-                    onPressed: () {
-                      // Add follow/unfollow functionality
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.white),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  trailing: SizedBox(
+                    width: 110,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        _toggleFollow(user['user_id'], user['is_following'] ?? false);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.white),
+                        backgroundColor: Colors.white, // ✅ ปุ่มเป็นสีขาวทั้งคู่
+                        padding: EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        (user['is_following'] ?? false) ? 'กำลังติดตาม' : 'ติดตาม',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                    child: Text(
-                      'ติดตาม',
-                      style: TextStyle(color: Colors.white),
-                    ),
                   ),
+
+
+
+
+
                   contentPadding: EdgeInsets.symmetric(vertical: 1, horizontal: 18),
                 );
               },
